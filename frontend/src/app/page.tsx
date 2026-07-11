@@ -99,7 +99,9 @@ export default function Home() {
   }, [memories, journalText, loading, error]);
 
   return (
-    <div className="tome-scene flex flex-col items-center justify-center gap-5 px-3">
+    <div className="tome-scene flex flex-col items-center justify-center gap-3 px-3">
+      <div className="tome-embers" aria-hidden />
+
       <header className="text-center relative z-10">
         <h1
           className="tome-heading"
@@ -115,10 +117,6 @@ export default function Home() {
       {memories !== null && (
         <Book spreads={spreads} index={spreadIndex} onIndexChange={setSpreadIndex} />
       )}
-
-      <p className="tome-eyebrow relative z-10" style={{ color: "#57503f" }}>
-        ◄ ► turn the page
-      </p>
     </div>
   );
 }
