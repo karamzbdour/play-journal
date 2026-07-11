@@ -136,7 +136,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyX = map.tileToWorldX(enemyTileX)!;
       const enemyY = map.tileToWorldY(enemyTileY)!;
       // Aggression 3 so the demo reaches all three example attacks (see combat/Attack.ts) over time.
-      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3);
+      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3, 50);
       this.enemies = [enemy];
 
       this.entityLabels = [
@@ -151,6 +151,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         x: this.player.sprite.x,
         y: this.player.sprite.y,
         statusEffects: this.player.statusEffects,
+        health: this.player.health,
       });
 
       // Reuses the same .collides flag Phaser already computed for player-movement collision
@@ -170,6 +171,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
             return e.sprite.y;
           },
           statusEffects: e.statusEffects,
+          health: e.health,
           aggressionLevel: e.aggressionLevel,
         };
         return new EnemyCombat(combatEntity, getPlayerTarget, blocker);
@@ -184,9 +186,10 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
           return self.player.sprite.y;
         },
         statusEffects: this.player.statusEffects,
+        health: this.player.health,
       };
       const getEnemyTargets = (): CombatEntity[] =>
-        this.enemies.map((e) => ({ x: e.sprite.x, y: e.sprite.y, statusEffects: e.statusEffects }));
+        this.enemies.map((e) => ({ x: e.sprite.x, y: e.sprite.y, statusEffects: e.statusEffects, health: e.health }));
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
         playerSelf,

@@ -1,5 +1,7 @@
 import { ATTACKS, AttackDefinition } from "./Attack";
 import StatusEffectController from "./StatusEffectController";
+import Health from "./Health";
+import { resolveAttackComponents } from "./AttackComponent";
 import { LineOfSightBlocker, isWithinRange, hasLineOfSight } from "./lineOfSight";
 import { TILE_SIZE } from "../constants";
 
@@ -7,6 +9,7 @@ export interface CombatEntity {
   x: number;
   y: number;
   statusEffects: StatusEffectController;
+  health: Health;
 }
 
 export interface AggressiveCombatEntity extends CombatEntity {
@@ -91,10 +94,6 @@ export default class EnemyCombat {
     if (!chosen) return;
 
     this.cooldowns.set(chosen.id, chosen.cooldownMs);
-
-    for (const application of chosen.effects) {
-      const recipient = application.target === "self" ? this.enemy : target;
-      recipient.statusEffects.apply(application.effectId, application.durationMs);
-    }
+    resolveAttackComponents(chosen.effects, this.enemy, target, 0);
   }
 }

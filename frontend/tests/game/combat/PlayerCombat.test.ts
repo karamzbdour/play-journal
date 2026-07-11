@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import PlayerCombat, { AttackInput } from "@/game/combat/PlayerCombat";
 import { CombatEntity } from "@/game/combat/EnemyCombat";
 import StatusEffectController from "@/game/combat/StatusEffectController";
+import Health from "@/game/combat/Health";
 import { LineOfSightBlocker } from "@/game/combat/lineOfSight";
 import { Weapon } from "@/game/combat/Weapon";
 
@@ -9,7 +10,7 @@ const OPEN_BLOCKER: LineOfSightBlocker = { isBlocked: () => false };
 const BLOCKED_BLOCKER: LineOfSightBlocker = { isBlocked: () => true };
 
 function makeEntity(x = 0, y = 0): CombatEntity {
-  return { x, y, statusEffects: new StatusEffectController() };
+  return { x, y, statusEffects: new StatusEffectController(), health: new Health(100) };
 }
 
 function makeWeapon(overrides: Partial<Weapon> = {}): Weapon {
@@ -184,5 +185,44 @@ describe("PlayerCombat abilities", () => {
     combat.update(0); // basic attack fires and starts its own cooldown; ability fires too
 
     expect(enemy.statusEffects.has("slow")).toBe(true); // from either/both - just confirming no crash/interference
+  });
+});
+
+describe("PlayerCombat damage", () => {
+  it("the basic attack deals the wielder's weapon.damage to the nearest enemy", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isBasicAttackJustPressed: () => true });
+    const weapon = makeWeapon({ damage: 15 });
+    const combat = new PlayerCombat(weapon, self, () => [enemy], OPEN_BLOCKER, input);
+
+    combat.update(0);
+
+    expect(enemy.health.getRatio()).toBe(0.85);
+  });
+
+  it("an ability with an explicit damage amount deals exactly that amount, ignoring weapon.damage", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isAbilityJustPressed: (slot) => slot === 0 });
+    const weapon = makeWeapon({ attackIds: ["puncture"], damage: 999 });
+    const combat = new PlayerCombat(weapon, self, () => [enemy], OPEN_BLOCKER, input);
+
+    combat.update(0);
+
+    expect(enemy.health.getRatio()).toBe(0.88);
+  });
+
+  it("a self-only ability deals no damage to anyone", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isAbilityJustPressed: (slot) => slot === 0 });
+    const weapon = makeWeapon({ attackIds: ["battle_focus"] });
+    const combat = new PlayerCombat(weapon, self, () => [enemy], OPEN_BLOCKER, input);
+
+    combat.update(0);
+
+    expect(self.health.getRatio()).toBe(1);
+    expect(enemy.health.getRatio()).toBe(1);
   });
 });

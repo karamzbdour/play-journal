@@ -1,16 +1,19 @@
 import type Phaser from "phaser";
 import StatusEffectController from "../combat/StatusEffectController";
 import { Weapon } from "../combat/Weapon";
+import Health from "../combat/Health";
 
 // Player movement modeled on the "05-physics" example from
 // https://github.com/mikewesthad/phaser-3-tilemap-blog-posts (post-1): arcade physics body,
 // 4-directional cursor input, velocity normalized so diagonal movement isn't faster.
 // No sprite/atlas assets yet, so the player is a plain circle for now.
 const PLAYER_SPEED = 350;
+const PLAYER_MAX_HP = 100;
 
 export default class Player {
   public sprite: Phaser.GameObjects.Arc;
   public statusEffects: StatusEffectController = new StatusEffectController();
+  public health: Health = new Health(PLAYER_MAX_HP);
   public weapon: Weapon;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
