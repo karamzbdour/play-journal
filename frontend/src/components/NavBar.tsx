@@ -38,8 +38,8 @@ export default function NavBar() {
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
       }}
     >
-      {/* Nav Links */}
-      <div className="flex items-center gap-8">
+      {/* Nav Links, pinned to the true center of the bar */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
         {navItems.map((item) => {
           const isActive = pathname === item.path;
           return (
@@ -70,7 +70,7 @@ export default function NavBar() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-4">
         {mounted && isAuthenticated() ? (
           <button
             onClick={handleLogout}
