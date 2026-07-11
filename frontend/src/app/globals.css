@@ -24,3 +24,316 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ---------------------------------------------------------------------------
+   The Tome - open-book journal (home page)
+   Parchment pages + pixel-dungeon chrome. Flip is a single "leaf" (the right
+   page) rotating around the spine in 3D; the pages beneath already show the
+   destination spread, so committing the index at animation end is seamless.
+--------------------------------------------------------------------------- */
+
+:root {
+  --parchment: #e9dcc0;
+  --parchment-deep: #d9c69e;
+  --parchment-edge: #c2ab7e;
+  --ink: #2e2418;
+  --ink-faded: #6b5a41;
+  --ink-blood: #8c2f24;
+  --leather: #2c1a10;
+  --leather-edge: #180d06;
+  --torch: #fbbf24;
+  --leaf-turn-ms: 650ms;
+}
+
+.tome-scene {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 108%, rgba(251, 191, 36, 0.09), transparent 60%),
+    radial-gradient(ellipse 120% 90% at 50% 45%, #101625 0%, #060a13 70%, #030509 100%);
+}
+
+/* Torchlight breathing over the whole scene */
+.tome-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 55% 45% at 50% 42%, rgba(251, 191, 36, 0.1), transparent 70%);
+  animation: torch-flicker 5s ease-in-out infinite alternate;
+}
+
+/* Vignette, echoing the in-game camera vignette */
+.tome-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 18vmax 6vmax rgba(0, 0, 0, 0.78);
+}
+
+@keyframes torch-flicker {
+  0%   { opacity: 0.55; }
+  18%  { opacity: 0.9; }
+  34%  { opacity: 0.68; }
+  55%  { opacity: 1; }
+  73%  { opacity: 0.62; }
+  100% { opacity: 0.85; }
+}
+
+/* --- The closed shell: leather cover + stacked page edges ---------------- */
+
+.tome {
+  position: relative;
+  width: min(1060px, 95vw);
+  height: min(640px, 76vh);
+  padding: 16px;
+  border-radius: 6px 10px 10px 6px;
+  background:
+    linear-gradient(145deg, #3a2517 0%, var(--leather) 45%, #1f1109 100%);
+  border: 2px solid var(--leather-edge);
+  box-shadow:
+    0 30px 60px -12px rgba(0, 0, 0, 0.85),
+    0 0 90px -20px rgba(251, 191, 36, 0.18),
+    inset 0 1px 0 rgba(255, 220, 160, 0.08);
+}
+
+.tome-spread {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  perspective: 2400px;
+}
+
+/* Stacked page edges peeking out under the open pages */
+.tome-page-stack {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 10px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--parchment-deep) 0px,
+    var(--parchment-deep) 2px,
+    var(--parchment-edge) 2px,
+    var(--parchment-edge) 3px
+  );
+}
+.tome-page-stack--left  { left: 4px;  border-radius: 3px 0 0 3px; }
+.tome-page-stack--right { right: 4px; border-radius: 0 3px 3px 0; }
+
+/* --- Pages ---------------------------------------------------------------- */
+
+.tome-page {
+  position: relative;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 30%, rgba(255, 250, 234, 0.5), transparent 75%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.18 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--parchment) 0%, var(--parchment-deep) 100%);
+}
+
+.tome-page--left {
+  border-radius: 4px 0 0 4px;
+  box-shadow:
+    inset -32px 0 34px -22px rgba(60, 40, 10, 0.55),
+    inset 3px 0 8px -3px rgba(255, 250, 234, 0.5);
+}
+
+.tome-page--right {
+  border-radius: 0 4px 4px 0;
+  box-shadow:
+    inset 32px 0 34px -22px rgba(60, 40, 10, 0.55),
+    inset -3px 0 8px -3px rgba(255, 250, 234, 0.5);
+}
+
+.tome-page-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.1rem, 3vmin, 2.2rem) clamp(1.2rem, 3.4vmin, 2.6rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--parchment-edge) transparent;
+}
+
+/* --- The turning leaf ----------------------------------------------------- */
+
+.tome-leaf {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transition: transform var(--leaf-turn-ms) cubic-bezier(0.35, 0.1, 0.25, 1);
+  z-index: 10;
+  will-change: transform;
+}
+
+.tome-leaf--start { transform: rotateY(0deg); }
+.tome-leaf--turned { transform: rotateY(-180deg); }
+/* Prev flips run the same rotation in reverse */
+.tome-leaf--start-flipped { transform: rotateY(-180deg); }
+.tome-leaf--turned-flipped { transform: rotateY(0deg); }
+
+.tome-leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tome-leaf-face--back {
+  transform: rotateY(180deg);
+}
+
+/* Reuse page parchment on leaf faces via composition in the markup:
+   each face contains a .tome-page (width overridden to fill the face). */
+.tome-leaf-face > .tome-page {
+  width: 100%;
+}
+
+/* --- Chrome: pixel headings, stats, buttons ------------------------------- */
+
+.tome-eyebrow {
+  font-family: var(--font-silkscreen), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+}
+
+.tome-heading {
+  font-family: var(--font-silkscreen), monospace;
+  font-size: clamp(0.85rem, 1.7vmin, 1.05rem);
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tome-hand {
+  font-family: var(--font-caveat), cursive;
+  font-size: clamp(1.15rem, 2.4vmin, 1.4rem);
+  line-height: 1.6;
+}
+
+.tome-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-silkscreen), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tome-stat-row .leader {
+  flex: 1;
+  border-bottom: 2px dotted rgba(107, 90, 65, 0.5);
+  transform: translateY(-3px);
+}
+
+/* Chunky pixel-style button, tinted per-memory via --btn-accent */
+.tome-btn {
+  --btn-accent: var(--ink);
+  font-family: var(--font-silkscreen), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment);
+  background: var(--btn-accent);
+  border: none;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  box-shadow:
+    0 3px 0 0 rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.tome-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.tome-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.22);
+}
+.tome-btn:disabled { opacity: 0.45; cursor: default; }
+.tome-btn:focus-visible {
+  outline: 3px solid var(--torch);
+  outline-offset: 2px;
+}
+
+/* Ruled writing area on today's page */
+.tome-write {
+  width: 100%;
+  flex: 1;
+  min-height: 8rem;
+  resize: none;
+  border: none;
+  background: transparent;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(2.1em - 1px),
+    rgba(107, 90, 65, 0.35) calc(2.1em - 1px),
+    rgba(107, 90, 65, 0.35) 2.1em
+  );
+  color: var(--ink);
+  caret-color: var(--ink);
+  font-family: var(--font-caveat), cursive;
+  font-size: clamp(1.2rem, 2.6vmin, 1.45rem);
+  line-height: 2.1em;
+}
+.tome-write:focus { outline: none; }
+.tome-write::placeholder { color: rgba(107, 90, 65, 0.65); }
+
+/* Page-corner turn controls */
+.tome-corner {
+  position: absolute;
+  bottom: 22px;
+  z-index: 20;
+  font-family: var(--font-silkscreen), monospace;
+  font-size: 0.85rem;
+  color: var(--ink-faded);
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  transition: color 120ms ease, transform 120ms ease;
+}
+.tome-corner:hover:not(:disabled) { color: var(--ink); transform: scale(1.15); }
+.tome-corner:disabled { opacity: 0.2; cursor: default; }
+.tome-corner:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
+.tome-corner--prev { left: 26px; }
+.tome-corner--next { right: 26px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tome-scene::before { animation: none; }
+  .tome-leaf { transition-duration: 1ms; }
+}
+
+/* Small screens: pages stack vertically, leaf rotation is skipped in JS */
+@media (max-width: 719px) {
+  .tome {
+    height: min(82vh, 900px);
+    padding: 10px;
+  }
+  .tome-spread { flex-direction: column; }
+  .tome-page { width: 100%; height: 50%; }
+  .tome-page--left { border-radius: 4px 4px 0 0; box-shadow: inset 0 -20px 24px -18px rgba(60, 40, 10, 0.55); }
+  .tome-page--right { border-radius: 0 0 4px 4px; box-shadow: inset 0 20px 24px -18px rgba(60, 40, 10, 0.55); }
+  .tome-page-stack { display: none; }
+  .tome-corner--prev { left: 8px; }
+  .tome-corner--next { right: 8px; }
+}
