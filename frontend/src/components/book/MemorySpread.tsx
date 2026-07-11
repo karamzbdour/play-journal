@@ -80,7 +80,7 @@ export default function memorySpread(
       </div>
 
       <button
-        className="tome-btn"
+        className="tome-btn tome-btn-slide"
         style={{ marginTop: "1.8rem", alignSelf: "flex-start" }}
         onClick={() => onRelive(entry)}
       >

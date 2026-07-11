@@ -84,7 +84,7 @@ export default function todaySpread({
         }}
       >
         <button
-          className="tome-btn"
+          className="tome-btn tome-btn-slide"
           onClick={onGenerate}
           disabled={loading || !journalText.trim()}
         >
