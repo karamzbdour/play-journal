@@ -142,10 +142,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyY = map.tileToWorldY(enemyTileY)!;
       this.enemy = new Enemy(this, enemyX, enemyY, config.enemy_color);
 
-      this.nameplates = [
-        new NamePlate(this, fontFamily, this.player.sprite, "Player"),
-        new NamePlate(this, fontFamily, this.enemy.sprite, prettifyName(config.enemy_type)),
-      ];
+      this.nameplates = [new NamePlate(this, fontFamily, this.enemy.sprite, prettifyName(config.enemy_type))];
 
       // Full-screen mood tint over the whole level, so the run feels different depending on
       // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
