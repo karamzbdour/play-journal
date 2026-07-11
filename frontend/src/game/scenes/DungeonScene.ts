@@ -7,6 +7,7 @@ import { GameConfig } from "@/types/game";
 import { getMoodTint } from "@/lib/moodTint";
 import { addVignette } from "../effects/vignette";
 import { addConfetti } from "../effects/confetti";
+import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
 
 // Room count scales with the journal entry's length_of_day: use the value directly between
 // 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
@@ -34,6 +35,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
     private vignette?: Phaser.GameObjects.Image;
+    private rainSpawnZone?: { x: number; y: number; width: number; height: number; getRandomPoint(p: { x: number; y: number }): void };
 
     constructor() {
       super("DungeonScene");
@@ -142,6 +144,11 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
         addConfetti(this, this.scale.width);
       }
 
+      // Light rain for reflective days, world-space so it scrolls with the tiles (see rain.ts)
+      if (tint.rain) {
+        this.rainSpawnZone = addRain(this).spawnZone;
+      }
+
       this.add
         .text(100, 10, `${dungeon.rooms.length} rooms generated`, {
           fontSize: "14px",
@@ -155,6 +162,9 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
 
     update() {
       this.player.update();
+      if (this.rainSpawnZone) {
+        rainFollowCamera(this, this.rainSpawnZone);
+      }
     }
   };
 }
