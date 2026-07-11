@@ -38,25 +38,6 @@ export default function NavBar() {
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
       }}
     >
-      {/* Brand Logo with Glowing Fire Hover Effect */}
-      <Link href="/" className="relative group flex items-center justify-center cursor-pointer p-2">
-        {/* 1. Fire / Glow Aura Layer (Behind Logo) */}
-        <div 
-          className="absolute -inset-2 opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 rounded-full pointer-events-none blur-md z-0"
-          style={{
-            background: "radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(251,191,36,0.5) 50%, transparent 100%)",
-            animation: "torch-flicker 1.5s ease-in-out infinite alternate"
-          }}
-        />
-
-        {/* 2. Foreground Logo Image */}
-        <img 
-          src="/logo.webp" 
-          alt="Play-Journal Logo" 
-          className="relative z-10 w-12 h-12 object-contain transition-all duration-300 group-hover:scale-110 group-hover:rotate-12"
-        />
-      </Link>
-
       {/* Nav Links */}
       <div className="flex items-center gap-8">
         {navItems.map((item) => {

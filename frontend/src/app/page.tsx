@@ -109,20 +109,8 @@ export default function Home() {
 
   return (
     <>
-    <div className="tome-scene flex flex-col items-center justify-center gap-3 px-3 pt-24">
+    <div className="tome-scene flex flex-col items-center justify-center px-3 pt-20">
       <div className="tome-embers" aria-hidden />
-
-      <header className="text-center relative z-10">
-        <h1
-          className="tome-heading"
-          style={{ color: "var(--torch)", textShadow: "0 0 24px rgba(251,191,36,0.35)" }}
-        >
-          Play-Journal
-        </h1>
-        <p className="tome-eyebrow" style={{ color: "#8a7550", marginTop: "0.35rem" }}>
-          The tome of days
-        </p>
-      </header>
 
       {memories !== null && (
         <Book spreads={spreads} index={spreadIndex} onIndexChange={setSpreadIndex} />
