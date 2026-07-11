@@ -3,6 +3,7 @@ import { STATUS_EFFECTS, StatusEffectDefinition } from "./StatusEffect";
 interface ActiveEffect {
   def: StatusEffectDefinition;
   remainingMs: number;
+  totalMs: number;
 }
 
 export default class StatusEffectController {
@@ -18,7 +19,7 @@ export default class StatusEffectController {
       }
     }
 
-    this.active.set(effectId, { def, remainingMs: durationMs });
+    this.active.set(effectId, { def, remainingMs: durationMs, totalMs: durationMs });
     return true;
   }
 
@@ -29,6 +30,12 @@ export default class StatusEffectController {
   getMagnitude(effectId: string, fallback = 1): number {
     const effect = this.active.get(effectId);
     return effect?.def.magnitude ?? fallback;
+  }
+
+  getRemainingRatio(effectId: string): number {
+    const effect = this.active.get(effectId);
+    if (!effect) return 0;
+    return Math.max(0, Math.min(1, effect.remainingMs / effect.totalMs));
   }
 
   getActiveIds(): string[] {

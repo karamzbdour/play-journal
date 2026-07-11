@@ -50,4 +50,34 @@ describe("StatusEffectController", () => {
   it("ignores unknown effect ids", () => {
     expect(controller.apply("not_a_real_effect", 1000)).toBe(false);
   });
+
+  describe("getRemainingRatio", () => {
+    it("returns 0 for an effect that isn't active", () => {
+      expect(controller.getRemainingRatio("slow")).toBe(0);
+    });
+
+    it("returns 1 right after applying an effect", () => {
+      controller.apply("slow", 1000);
+      expect(controller.getRemainingRatio("slow")).toBe(1);
+    });
+
+    it("returns the fraction of duration remaining", () => {
+      controller.apply("slow", 1000);
+      controller.update(250);
+      expect(controller.getRemainingRatio("slow")).toBe(0.75);
+    });
+
+    it("returns 0 once the effect has expired", () => {
+      controller.apply("slow", 1000);
+      controller.update(1000);
+      expect(controller.getRemainingRatio("slow")).toBe(0);
+    });
+
+    it("resets to 1 on reapplication even if the previous run was partway through", () => {
+      controller.apply("slow", 1000);
+      controller.update(900);
+      controller.apply("slow", 2000);
+      expect(controller.getRemainingRatio("slow")).toBe(1);
+    });
+  });
 });

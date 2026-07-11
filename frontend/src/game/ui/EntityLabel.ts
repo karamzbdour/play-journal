@@ -8,6 +8,7 @@ export interface NamePlateTarget {
 
 export interface StatusEffectSource {
   getActiveIds(): string[];
+  getRemainingRatio(effectId: string): number;
 }
 
 export interface EntityLabelOptions {
@@ -23,7 +24,10 @@ const DEFAULT_COLOR = "#f8fafc";
 const DEFAULT_FONT_SIZE = "12px";
 const BADGE_FONT_SIZE = "10px";
 const BADGE_STACK_GAP = 14;
-const BADGE_LINE_HEIGHT = 13;
+const BADGE_LINE_HEIGHT = 19;
+const BAR_WIDTH = 40;
+const BAR_HEIGHT = 3;
+const BAR_GAP = 2;
 
 export function diffBadgeIds(previous: string[], current: string[]): { added: string[]; removed: string[] } {
   const previousSet = new Set(previous);
@@ -42,6 +46,7 @@ export default class EntityLabel {
   private nameText?: Phaser.GameObjects.Text;
   private statusEffects?: StatusEffectSource;
   private badgeTexts: Map<string, Phaser.GameObjects.Text> = new Map();
+  private badgeBars: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   private activeBadgeIds: string[] = [];
 
   constructor(scene: Phaser.Scene, fontFamily: string, target: NamePlateTarget, options: EntityLabelOptions = {}) {
@@ -76,6 +81,8 @@ export default class EntityLabel {
     for (const id of removed) {
       this.badgeTexts.get(id)?.destroy();
       this.badgeTexts.delete(id);
+      this.badgeBars.get(id)?.destroy();
+      this.badgeBars.delete(id);
     }
 
     for (const id of added) {
@@ -91,6 +98,11 @@ export default class EntityLabel {
         })
         .setOrigin(0.5, 1);
       this.badgeTexts.set(id, text);
+
+      const bar = this.scene.add
+        .rectangle(this.target.x, this.target.y, BAR_WIDTH, BAR_HEIGHT, parseInt(def.color.replace("#", ""), 16))
+        .setOrigin(0, 0.5);
+      this.badgeBars.set(id, bar);
     }
 
     this.activeBadgeIds = currentIds;
@@ -100,8 +112,14 @@ export default class EntityLabel {
     const baseY = this.target.y - this.badgeRowOffsetY();
 
     this.activeBadgeIds.forEach((id, i) => {
+      const textY = baseY - i * BADGE_LINE_HEIGHT;
       const text = this.badgeTexts.get(id)!;
-      text.setPosition(this.target.x, baseY - i * BADGE_LINE_HEIGHT);
+      text.setPosition(this.target.x, textY);
+
+      const bar = this.badgeBars.get(id)!;
+      const ratio = this.statusEffects?.getRemainingRatio(id) ?? 1;
+      bar.setPosition(this.target.x - BAR_WIDTH / 2, textY + BAR_GAP + BAR_HEIGHT / 2);
+      bar.width = BAR_WIDTH * ratio;
     });
   }
 
@@ -117,5 +135,7 @@ export default class EntityLabel {
     this.nameText?.destroy();
     this.badgeTexts.forEach((text) => text.destroy());
     this.badgeTexts.clear();
+    this.badgeBars.forEach((bar) => bar.destroy());
+    this.badgeBars.clear();
   }
 }
