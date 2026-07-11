@@ -11,6 +11,8 @@ import { addVignette } from "../effects/vignette";
 import { addConfetti } from "../effects/confetti";
 import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
 import EntityLabel from "../ui/EntityLabel";
+import { loadSettings, subscribeSettings } from "../settings";
+import { getDisplayName } from "@/lib/auth";
 import EnemyCombat, { CombatEntity, AggressiveCombatEntity } from "../combat/EnemyCombat";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
@@ -139,8 +141,19 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3);
       this.enemies = [enemy];
 
+      const playerLabel = new EntityLabel(this, fontFamily, this.player.sprite, {
+        name: getDisplayName() ?? "You",
+        statusEffects: this.player.statusEffects,
+      });
+      playerLabel.setNameVisible(loadSettings().showPlayerName);
+      const unsubscribeSettings = subscribeSettings((settings) => {
+        playerLabel.setNameVisible(settings.showPlayerName);
+      });
+      this.events.once(PhaserLib.Scenes.Events.SHUTDOWN, unsubscribeSettings);
+      this.events.once(PhaserLib.Scenes.Events.DESTROY, unsubscribeSettings);
+
       this.entityLabels = [
-        new EntityLabel(this, fontFamily, this.player.sprite, { statusEffects: this.player.statusEffects }),
+        playerLabel,
         new EntityLabel(this, fontFamily, enemy.sprite, {
           name: prettifyName(config.enemy_type),
           statusEffects: enemy.statusEffects,

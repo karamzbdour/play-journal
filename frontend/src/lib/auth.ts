@@ -30,6 +30,18 @@ export function getUser(): any | null {
   return user ? JSON.parse(user) : null;
 }
 
+// Best-effort display name from the stored Supabase user: full name if the
+// account has one, otherwise the email's local part.
+export function getDisplayName(): string | null {
+  const user = getUser();
+  if (!user) return null;
+  return (
+    user.user_metadata?.full_name ||
+    user.full_name ||
+    (typeof user.email === "string" ? user.email.split("@")[0] : null)
+  );
+}
+
 export function isAuthenticated(): boolean {
   return !!getAuthToken();
 }

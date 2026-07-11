@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { GameConfig } from "@/types/game";
 import { loadGameConfig, clearGameConfig } from "@/lib/gameSession";
+import GameSettingsMenu from "@/components/GameSettingsMenu";
 
 // Dynamically import the Phaser component with SSR disabled
 const GameComponent = dynamic(() => import("../../components/GameComponent"), {
@@ -156,6 +157,8 @@ export default function PlayPage() {
       >
         ← Back
       </button>
+
+      <GameSettingsMenu />
 
       <div className="w-full h-full">
         <GameComponent

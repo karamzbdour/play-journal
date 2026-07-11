@@ -13,7 +13,7 @@ interface TodaySpreadProps {
 }
 
 // The tome's final spread: a scribe's note on the left (doubles as onboarding
-// when the book is empty) and today's blank ruled page on the right.
+// when the book is empty) and today's blank page on the right.
 export default function todaySpread({
   spreadIndex,
   journalText,

@@ -25,6 +25,15 @@ export default function Home() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fallingAsleep, setFallingAsleep] = useState(false);
+
+  // Fade the scene to black — drifting off to sleep — then wake up in the dungeon.
+  // Duration matches the fall-asleep animation in globals.css plus a small hold.
+  const SLEEP_FADE_MS = 2200;
+  const fallAsleepThenPlay = () => {
+    setFallingAsleep(true);
+    window.setTimeout(() => router.push("/play"), SLEEP_FADE_MS);
+  };
 
   // Open the book on today's blank page (the spread after the last memory)
   useEffect(() => {
@@ -56,7 +65,7 @@ export default function Home() {
       const data: GameConfig = await response.json();
       saveMemory(journalText, data);
       saveGameConfig(data);
-      router.push("/play");
+      fallAsleepThenPlay();
     } catch (err) {
       console.error(err);
       setError(
@@ -72,7 +81,7 @@ export default function Home() {
   const handlePreviewMock = () => {
     setError(null);
     saveGameConfig(mockGameConfig);
-    router.push("/play");
+    fallAsleepThenPlay();
   };
 
   const handleRelive = (entry: MemoryEntry) => {
@@ -99,6 +108,7 @@ export default function Home() {
   }, [memories, journalText, loading, error]);
 
   return (
+    <>
     <div className="tome-scene flex flex-col items-center justify-center gap-3 px-3 pt-24">
       <div className="tome-embers" aria-hidden />
 
@@ -118,5 +128,10 @@ export default function Home() {
         <Book spreads={spreads} index={spreadIndex} onIndexChange={setSpreadIndex} />
       )}
     </div>
+
+    {/* Sibling of .tome-scene: the fixed scene creates its own stacking
+        context, so the overlay must live outside it to cover the nav bar. */}
+    {fallingAsleep && <div className="sleep-fade" aria-hidden />}
+    </>
   );
 }

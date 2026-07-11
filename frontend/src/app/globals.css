@@ -330,7 +330,7 @@ body {
   color: var(--ink) !important;
 }
 
-/* Ruled writing area on today's page */
+/* Writing area on today's page */
 .tome-write {
   width: 100%;
   flex: 1;
@@ -338,13 +338,6 @@ body {
   resize: none;
   border: none;
   background: transparent;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(1.7em - 1px),
-    rgba(107, 90, 65, 0.17) calc(1.7em - 1px),
-    rgba(107, 90, 65, 0.17) 1.7em
-  );
   color: var(--ink);
   caret-color: var(--ink);
   font-family: var(--font-caveat), cursive;
@@ -352,17 +345,6 @@ body {
   line-height: 1.7em;
 }
 
-/* Faint ruling under handwritten text on filled pages; spacing follows the
-   element's own line-height so the ink sits on the lines. */
-.tome-ruled {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(1.6em - 1px),
-    rgba(107, 90, 65, 0.14) calc(1.6em - 1px),
-    rgba(107, 90, 65, 0.14) 1.6em
-  );
-}
 .tome-write:focus { outline: none; }
 .tome-write::placeholder { color: rgba(107, 90, 65, 0.65); }
 
@@ -386,10 +368,39 @@ body {
 .tome-corner--prev { left: 26px; }
 .tome-corner--next { right: 26px; }
 
+/* --- Falling asleep -------------------------------------------------------
+   Full-screen fade to black when a run begins: eyelids droop, fight it for a
+   blink or two, then close. The page navigates once the animation lands
+   (SLEEP_FADE_MS in app/page.tsx must cover the duration here). */
+
+.sleep-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #000;
+  opacity: 0;
+  animation: fall-asleep 2100ms ease-in forwards;
+}
+
+@keyframes fall-asleep {
+  0%   { opacity: 0; }
+  28%  { opacity: 0.7; }   /* eyelids droop */
+  42%  { opacity: 0.4; }   /* jolt half-awake */
+  62%  { opacity: 0.88; }  /* drooping again */
+  72%  { opacity: 0.72; }  /* one last flutter */
+  100% { opacity: 1; }     /* out cold */
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tome-scene::before { animation: none; }
   .tome-embers { animation: none; opacity: 0.3; }
   .tome-leaf { transition-duration: 1ms; }
+  .sleep-fade { animation: fall-asleep-reduced 400ms ease-in forwards; }
+}
+
+@keyframes fall-asleep-reduced {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Small screens: pages stack vertically, leaf rotation is skipped in JS */

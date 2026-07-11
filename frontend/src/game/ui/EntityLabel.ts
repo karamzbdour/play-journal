@@ -105,6 +105,10 @@ export default class EntityLabel {
     });
   }
 
+  setNameVisible(visible: boolean) {
+    this.nameText?.setVisible(visible);
+  }
+
   update() {
     if (this.nameText) {
       this.nameText.setPosition(this.target.x, this.target.y - this.offsetY);
