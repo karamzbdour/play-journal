@@ -137,23 +137,17 @@ export default function Home() {
             <div className="w-16 h-16 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-center text-3xl mb-4">
               🕹️
             </div>
-          ) : (
-            <div className="h-full min-h-[450px] flex flex-col items-center justify-center text-center p-8 border border-dashed border-slate-800 bg-slate-900/10 rounded-2xl">
-              <div className="w-16 h-16 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-center text-3xl mb-4">
-                🕹️
-              </div>
-              <h3 className="text-lg font-bold text-slate-300 mb-1">Waiting for daily log</h3>
-              <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
-                Submit a journal entry on the left panel to initialize your dynamic arcade canvas and connect to the event stream.
-              </p>
-              <button
-                onClick={handleGenerateGame}
-                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold text-xs transition"
-              >
-                Generate Game Log
-              </button>
-            </div>
-          )}
+            <h3 className="text-lg font-bold text-slate-300 mb-1">Waiting for daily log</h3>
+            <p className="text-xs text-slate-500 max-w-sm mb-6 leading-relaxed">
+              Submit a journal entry on the left panel to initialize your dynamic arcade canvas and connect to the event stream.
+            </p>
+            <button
+              onClick={handleGenerateGame}
+              className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold text-xs transition"
+            >
+              Generate Game Log
+            </button>
+          </div>
         </section>
 
       </main>
