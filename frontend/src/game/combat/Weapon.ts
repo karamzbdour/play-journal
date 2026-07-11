@@ -22,6 +22,11 @@ export const CATEGORY_BASE_STATS: Record<WeaponCategory, CategoryBaseStats> = {
   longMelee: { damage: 10, attackSpeedMs: 800, rangeTiles: 3 },
 };
 
+// Uniform 50/50 pick - no design reason yet to weight one category over the other.
+export function randomWeaponCategory(): WeaponCategory {
+  return Math.random() < 0.5 ? "melee" : "longMelee";
+}
+
 // Weighted toward fewer attacks: 1 (60%), 2 (30%), 3 (10%).
 export function randomAttackCount(): number {
   const roll = Math.random();

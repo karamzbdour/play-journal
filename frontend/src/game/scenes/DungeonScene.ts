@@ -3,6 +3,7 @@ import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
 import Enemy from "../entities/Enemy";
+import { generateWeapon, randomWeaponCategory } from "../combat/Weapon";
 import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
 import { getMoodTint } from "@/lib/moodTint";
@@ -11,6 +12,7 @@ import { addConfetti } from "../effects/confetti";
 import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
 import EntityLabel from "../ui/EntityLabel";
 import EnemyCombat, { CombatEntity, AggressiveCombatEntity } from "../combat/EnemyCombat";
+import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
 
 // "deadline_demon" -> "Deadline Demon"
@@ -33,6 +35,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
     private enemies: Enemy[] = [];
     private entityLabels: EntityLabel[] = [];
     private enemyCombats: EnemyCombat[] = [];
+    private playerCombat!: PlayerCombat;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -118,7 +121,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const startRoom = dungeon.rooms[0];
       const playerX = map.tileToWorldX(startRoom.centerX)!;
       const playerY = map.tileToWorldY(startRoom.centerY)!;
-      this.player = new Player(this, playerX, playerY);
+      const weapon = generateWeapon(randomWeaponCategory());
+      this.player = new Player(this, playerX, playerY, weapon);
       this.cameras.main.startFollow(this.player.sprite, true);
 
       this.physics.add.collider(this.player.sprite, this.groundLayer);
@@ -171,6 +175,26 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         return new EnemyCombat(combatEntity, getPlayerTarget, blocker);
       });
 
+      const self = this;
+      const playerSelf: CombatEntity = {
+        get x() {
+          return self.player.sprite.x;
+        },
+        get y() {
+          return self.player.sprite.y;
+        },
+        statusEffects: this.player.statusEffects,
+      };
+      const getEnemyTargets = (): CombatEntity[] =>
+        this.enemies.map((e) => ({ x: e.sprite.x, y: e.sprite.y, statusEffects: e.statusEffects }));
+      this.playerCombat = new PlayerCombat(
+        this.player.weapon,
+        playerSelf,
+        getEnemyTargets,
+        blocker,
+        new PhaserAttackInput(this)
+      );
+
       // Full-screen mood tint over the whole level, so the run feels different depending on
       // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
       const tint = getMoodTint(config.mood);
@@ -214,6 +238,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       this.player.update(delta);
       this.enemies.forEach((enemy) => enemy.update(delta));
       this.enemyCombats.forEach((combat) => combat.update(delta));
+      this.playerCombat.update(delta);
       this.entityLabels.forEach((label) => label.update());
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);

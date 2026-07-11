@@ -19,4 +19,10 @@ describe("WEAPON_ATTACKS catalog", () => {
   it("includes at least one attack with no effects (a plain hit)", () => {
     expect(WEAPON_ATTACKS.some((a) => a.effects.length === 0)).toBe(true);
   });
+
+  it("gives every attack a positive cooldown", () => {
+    for (const attack of WEAPON_ATTACKS) {
+      expect(attack.cooldownMs).toBeGreaterThan(0);
+    }
+  });
 });
