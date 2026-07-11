@@ -10,6 +10,8 @@ export interface AttackDefinition {
   minAggression: number;
   cooldownMs: number;
   effects: AttackEffectApplication[];
+  requiresLineOfSight?: boolean;
+  maxRangeTiles?: number;
 }
 
 export const ATTACKS: AttackDefinition[] = [
@@ -19,6 +21,8 @@ export const ATTACKS: AttackDefinition[] = [
     minAggression: 1,
     cooldownMs: 5000,
     effects: [{ effectId: "unstoppable", target: "self", durationMs: 3000 }],
+    requiresLineOfSight: true,
+    maxRangeTiles: 8,
   },
   {
     id: "nagging_reminder",
@@ -26,6 +30,8 @@ export const ATTACKS: AttackDefinition[] = [
     minAggression: 2,
     cooldownMs: 4000,
     effects: [{ effectId: "slow", target: "target", durationMs: 2000 }],
+    requiresLineOfSight: true,
+    maxRangeTiles: 8,
   },
   {
     id: "silencing_glare",
@@ -33,5 +39,7 @@ export const ATTACKS: AttackDefinition[] = [
     minAggression: 3,
     cooldownMs: 6000,
     effects: [{ effectId: "suppressed", target: "target", durationMs: 2500 }],
+    requiresLineOfSight: true,
+    maxRangeTiles: 8,
   },
 ];

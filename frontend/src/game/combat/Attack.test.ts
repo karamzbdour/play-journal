@@ -21,4 +21,11 @@ describe("ATTACKS catalog", () => {
     const glare = ATTACKS.find((a) => a.id === "silencing_glare")!;
     expect(glare.minAggression).toBeGreaterThan(brace.minAggression);
   });
+
+  it("requires line of sight and an 8-tile range on all current attacks", () => {
+    for (const attack of ATTACKS) {
+      expect(attack.requiresLineOfSight).toBe(true);
+      expect(attack.maxRangeTiles).toBe(8);
+    }
+  });
 });
