@@ -1,15 +1,11 @@
-export interface AttackEffectApplication {
-  effectId: string;
-  target: "self" | "target";
-  durationMs: number;
-}
+import { AttackComponent } from "./AttackComponent";
 
 export interface AttackDefinition {
   id: string;
   name: string;
   minAggression: number;
   cooldownMs: number;
-  effects: AttackEffectApplication[];
+  effects: AttackComponent[];
   requiresLineOfSight?: boolean;
   maxRangeTiles?: number;
 }
@@ -20,7 +16,7 @@ export const ATTACKS: AttackDefinition[] = [
     name: "Brace",
     minAggression: 1,
     cooldownMs: 5000,
-    effects: [{ effectId: "unstoppable", target: "self", durationMs: 3000 }],
+    effects: [{ kind: "status", effectId: "unstoppable", target: "self", durationMs: 3000 }],
     requiresLineOfSight: true,
     maxRangeTiles: 8,
   },
@@ -29,7 +25,10 @@ export const ATTACKS: AttackDefinition[] = [
     name: "Nagging Reminder",
     minAggression: 2,
     cooldownMs: 4000,
-    effects: [{ effectId: "slow", target: "target", durationMs: 2000 }],
+    effects: [
+      { kind: "status", effectId: "slow", target: "target", durationMs: 2000 },
+      { kind: "damage", target: "target", amount: 10 },
+    ],
     requiresLineOfSight: true,
     maxRangeTiles: 8,
   },
@@ -38,7 +37,10 @@ export const ATTACKS: AttackDefinition[] = [
     name: "Silencing Glare",
     minAggression: 3,
     cooldownMs: 6000,
-    effects: [{ effectId: "suppressed", target: "target", durationMs: 2500 }],
+    effects: [
+      { kind: "status", effectId: "suppressed", target: "target", durationMs: 2500 },
+      { kind: "damage", target: "target", amount: 14 },
+    ],
     requiresLineOfSight: true,
     maxRangeTiles: 8,
   },
