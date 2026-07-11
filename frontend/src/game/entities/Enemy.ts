@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import StatusEffectController from "../combat/StatusEffectController";
+import Health from "../combat/Health";
 
 // Static placeholder enemy - a colored circle with no movement/AI, matching Player's use of a
 // plain circle in place of a sprite/atlas. Exists mainly to prove the nameplate and combat
@@ -7,11 +8,13 @@ import StatusEffectController from "../combat/StatusEffectController";
 export default class Enemy {
   public sprite: Phaser.GameObjects.Arc;
   public statusEffects: StatusEffectController = new StatusEffectController();
+  public health: Health;
   public aggressionLevel: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, color: string, aggressionLevel: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, color: string, aggressionLevel: number, maxHp: number) {
     this.sprite = scene.add.circle(x, y, 8, parseInt(color.replace("#", ""), 16));
     this.aggressionLevel = aggressionLevel;
+    this.health = new Health(maxHp);
   }
 
   update(deltaMs: number) {

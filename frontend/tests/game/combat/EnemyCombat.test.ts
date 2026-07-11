@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import EnemyCombat, { getAvailableAttacks, AggressiveCombatEntity, CombatEntity } from "./EnemyCombat";
-import StatusEffectController from "./StatusEffectController";
-import { ATTACKS, AttackDefinition } from "./Attack";
-import { LineOfSightBlocker } from "./lineOfSight";
+import EnemyCombat, { getAvailableAttacks, AggressiveCombatEntity, CombatEntity } from "@/game/combat/EnemyCombat";
+import StatusEffectController from "@/game/combat/StatusEffectController";
+import Health from "@/game/combat/Health";
+import { ATTACKS, AttackDefinition } from "@/game/combat/Attack";
+import { LineOfSightBlocker } from "@/game/combat/lineOfSight";
 
 const OPEN_BLOCKER: LineOfSightBlocker = { isBlocked: () => false };
 
@@ -11,6 +12,7 @@ function makeEntity(aggressionLevel: number): AggressiveCombatEntity {
     x: 0,
     y: 0,
     statusEffects: new StatusEffectController(),
+    health: new Health(100),
     aggressionLevel,
   };
 }
@@ -106,7 +108,7 @@ describe("EnemyCombat", () => {
 
   it("excludes attacks when the target is beyond max range", () => {
     const enemy = makeEntity(3);
-    const player: CombatEntity = { x: 500, y: 0, statusEffects: new StatusEffectController() }; // 500 > 8 tiles (384px)
+    const player: CombatEntity = { x: 500, y: 0, statusEffects: new StatusEffectController(), health: new Health(100) }; // 500 > 8 tiles (384px)
     const selector = vi.fn((_enemy: AggressiveCombatEntity, available: AttackDefinition[]) => available[0] ?? null);
     const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, { selector });
     combat.update(1500);
@@ -115,7 +117,7 @@ describe("EnemyCombat", () => {
 
   it("excludes attacks when line of sight is blocked", () => {
     const enemy = makeEntity(3);
-    const player: CombatEntity = { x: 100, y: 0, statusEffects: new StatusEffectController() }; // well within range
+    const player: CombatEntity = { x: 100, y: 0, statusEffects: new StatusEffectController(), health: new Health(100) }; // well within range
     const blockedBlocker: LineOfSightBlocker = { isBlocked: () => true };
     const selector = vi.fn((_enemy: AggressiveCombatEntity, available: AttackDefinition[]) => available[0] ?? null);
     const combat = new EnemyCombat(enemy, () => player, blockedBlocker, { selector });
@@ -125,10 +127,20 @@ describe("EnemyCombat", () => {
 
   it("includes attacks when the target is within range and line of sight is clear", () => {
     const enemy = makeEntity(3);
-    const player: CombatEntity = { x: 100, y: 0, statusEffects: new StatusEffectController() };
+    const player: CombatEntity = { x: 100, y: 0, statusEffects: new StatusEffectController(), health: new Health(100) };
     const selector = vi.fn((_enemy: AggressiveCombatEntity, available: AttackDefinition[]) => available[0] ?? null);
     const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, { selector });
     combat.update(1500);
     expect(selector).toHaveBeenLastCalledWith(enemy, expect.arrayContaining([expect.objectContaining({ id: "brace" })]));
+  });
+
+  it("deals damage to the target when the chosen attack has a damage component", () => {
+    const enemy = makeEntity(3);
+    const player: CombatEntity = makeEntity(0);
+    const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, {
+      selector: (_enemy, available) => available.find((a) => a.id === "nagging_reminder") ?? null,
+    });
+    combat.update(1500);
+    expect(player.health.getRatio()).toBeLessThan(1);
   });
 });

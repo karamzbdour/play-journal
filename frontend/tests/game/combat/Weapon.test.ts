@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { CATEGORY_BASE_STATS, randomAttackCount, randomWeaponCategory, pickUnique, generateWeapon } from "./Weapon";
-import { WEAPON_ATTACKS } from "./WeaponAttack";
+import { CATEGORY_BASE_STATS, randomAttackCount, randomWeaponCategory, pickUnique, generateWeapon } from "@/game/combat/Weapon";
+import { WEAPON_ATTACKS } from "@/game/combat/WeaponAttack";
 
 describe("CATEGORY_BASE_STATS", () => {
   it("gives melee a shorter range, faster speed, and higher damage than longMelee", () => {

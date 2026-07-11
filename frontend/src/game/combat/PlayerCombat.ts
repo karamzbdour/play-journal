@@ -2,11 +2,9 @@ import type Phaser from "phaser";
 import { CombatEntity } from "./EnemyCombat";
 import { LineOfSightBlocker, hasLineOfSight } from "./lineOfSight";
 import { Weapon } from "./Weapon";
-import { WEAPON_ATTACKS } from "./WeaponAttack";
+import { WEAPON_ATTACKS, BASIC_ATTACK } from "./WeaponAttack";
+import { resolveAttackComponents } from "./AttackComponent";
 import { TILE_SIZE } from "../constants";
-
-const BASIC_ATTACK_EFFECT_ID = "slow";
-const BASIC_ATTACK_EFFECT_DURATION_MS = 500;
 
 export interface AttackInput {
   isBasicAttackJustPressed(): boolean;
@@ -72,7 +70,7 @@ export default class PlayerCombat {
       this.blocker
     );
     if (!target) return;
-    target.statusEffects.apply(BASIC_ATTACK_EFFECT_ID, BASIC_ATTACK_EFFECT_DURATION_MS);
+    resolveAttackComponents(BASIC_ATTACK.effects, this.self, target, this.weapon.damage);
   }
 
   private tryAbility(slot: 0 | 1 | 2): void {
@@ -85,16 +83,13 @@ export default class PlayerCombat {
 
     this.abilityCooldowns.set(attackId, definition.cooldownMs);
 
-    const requiresTarget = definition.effects.some((application) => application.target === "target");
+    const requiresTarget = definition.effects.some((component) => component.target === "target");
     const target = requiresTarget
       ? findNearestTarget(this.self, this.getEnemies(), this.weapon.rangeTiles * TILE_SIZE, this.blocker)
       : null;
     if (requiresTarget && !target) return;
 
-    for (const application of definition.effects) {
-      const recipient = application.target === "self" ? this.self : target!;
-      recipient.statusEffects.apply(application.effectId, application.durationMs);
-    }
+    resolveAttackComponents(definition.effects, this.self, target, this.weapon.damage);
   }
 }
 

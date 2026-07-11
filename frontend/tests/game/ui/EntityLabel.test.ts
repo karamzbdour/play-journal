@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffBadgeIds } from "./EntityLabel";
+import { diffBadgeIds } from "@/game/ui/EntityLabel";
 
 describe("diffBadgeIds", () => {
   it("reports newly active ids as added", () => {

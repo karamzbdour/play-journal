@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { STATUS_EFFECTS } from "./StatusEffect";
+import { STATUS_EFFECTS } from "@/game/combat/StatusEffect";
 
 describe("STATUS_EFFECTS catalog", () => {
   it("keys every definition under its own id", () => {
