@@ -9,7 +9,9 @@ import { getMoodTint } from "@/lib/moodTint";
 import { addVignette } from "../effects/vignette";
 import { addConfetti } from "../effects/confetti";
 import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
-import NamePlate from "../ui/NamePlate";
+import EntityLabel from "../ui/EntityLabel";
+import EnemyCombat, { CombatEntity, AggressiveCombatEntity } from "../combat/EnemyCombat";
+import { LineOfSightBlocker } from "../combat/lineOfSight";
 
 // "deadline_demon" -> "Deadline Demon"
 function prettifyName(slug: string): string {
@@ -19,30 +21,18 @@ function prettifyName(slug: string): string {
     .join(" ");
 }
 
-// Room count scales with the journal entry's length_of_day: use the value directly between
-// 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
-// missing or not a real number (e.g. a backend response that predates this field) - otherwise
-// Math.max/min would propagate NaN into Dungeon's maxRooms and silently cap generation at 1 room.
+// Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
   if (!Number.isFinite(lengthOfDay)) return 5;
   return Math.round(Math.min(10, Math.max(5, lengthOfDay)));
 }
 
-// Step 1: generate a dungeon (https://github.com/mikewesthad/phaser-3-tilemap-blog-posts, post-3).
-// Step 2: a player (post-1's movement pattern) spawned in the first room, camera follows it.
-// Step 3: a real tilemap layer using the loaded tileset, replacing the rectangle placeholders.
-// Step 4: "better mapping" - proper corner/wall/door tiles per room via TILE_MAPPING, instead of
-// a flat floor/wall/door fill.
-// Step 5: wall collision, via setCollisionByExclusion on the walkable tile indices.
-//
-// Note: weightedRandomize's argument order is (weightedIndexes, x, y, width, height) in this
-// Phaser version - the original tutorial (written against an older Phaser 3.x) has the indexes
-// last, so this isn't a direct copy-paste of that snippet.
 export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
-    private enemy!: Enemy;
-    private nameplates: NamePlate[] = [];
+    private enemies: Enemy[] = [];
+    private entityLabels: EntityLabel[] = [];
+    private enemyCombats: EnemyCombat[] = [];
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -77,10 +67,10 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         height: dungeon.height,
       });
 
-      // Non-extruded tileset - no margin/spacing baked in
+
       const tileset = map.addTilesetImage("tiles", undefined, TILE_SIZE, TILE_SIZE, 0, 0)!;
       this.groundLayer = map.createBlankLayer("Ground", tileset)!;
-      // Second layer for items/decorations (chests, pots, towers, stairs) - empty for now
+      // Second layer for items/decorations
       this.stuffLayer = map.createBlankLayer("Stuff", tileset)!;
 
       // Fill each room with floor, corner, wall and door tiles from TILE_MAPPING
@@ -94,7 +84,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_LEFT, left, top);
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_RIGHT, right, top);
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_RIGHT, right, bottom);
-          this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_LEFT, left, bottom);
+        this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_LEFT, left, bottom);
 
         // Walls: mostly clean tiles, occasionally a dirty one
         this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.TOP, left + 1, top, width - 2, 1);
@@ -118,6 +108,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       });
 
       // Everything except empty tiles and floor variants should block movement
+      // hard-coded and needs changing when more tilemaps are added
       this.groundLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
       this.stuffLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
 
@@ -140,9 +131,45 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyTileY = dungeon.rooms[1] ? enemyRoom.centerY : Math.min(enemyRoom.bottom - 1, enemyRoom.centerY + 2);
       const enemyX = map.tileToWorldX(enemyTileX)!;
       const enemyY = map.tileToWorldY(enemyTileY)!;
-      this.enemy = new Enemy(this, enemyX, enemyY, config.enemy_color);
+      // Aggression 3 so the demo reaches all three example attacks (see combat/Attack.ts) over time.
+      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3);
+      this.enemies = [enemy];
 
-      this.nameplates = [new NamePlate(this, fontFamily, this.enemy.sprite, prettifyName(config.enemy_type))];
+      this.entityLabels = [
+        new EntityLabel(this, fontFamily, this.player.sprite, { statusEffects: this.player.statusEffects }),
+        new EntityLabel(this, fontFamily, enemy.sprite, {
+          name: prettifyName(config.enemy_type),
+          statusEffects: enemy.statusEffects,
+        }),
+      ];
+
+      const getPlayerTarget = (): CombatEntity => ({
+        x: this.player.sprite.x,
+        y: this.player.sprite.y,
+        statusEffects: this.player.statusEffects,
+      });
+
+      // Reuses the same .collides flag Phaser already computed for player-movement collision
+      // (via setCollisionByExclusion above), so line-of-sight blocking always matches what
+      // actually blocks movement.
+      const blocker: LineOfSightBlocker = {
+        isBlocked: (x, y) =>
+          !!this.groundLayer.getTileAtWorldXY(x, y)?.collides || !!this.stuffLayer.getTileAtWorldXY(x, y)?.collides,
+      };
+
+      this.enemyCombats = this.enemies.map((e) => {
+        const combatEntity: AggressiveCombatEntity = {
+          get x() {
+            return e.sprite.x;
+          },
+          get y() {
+            return e.sprite.y;
+          },
+          statusEffects: e.statusEffects,
+          aggressionLevel: e.aggressionLevel,
+        };
+        return new EnemyCombat(combatEntity, getPlayerTarget, blocker);
+      });
 
       // Full-screen mood tint over the whole level, so the run feels different depending on
       // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
@@ -162,7 +189,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         this.vignette = addVignette(this, this.scale.width, this.scale.height, tint.vignette);
       }
 
-      // Falling confetti for happy days
+      // Falling confetti for happy days, currently disabled.
       if (tint.confetti) {
         addConfetti(this, this.scale.width);
       }
@@ -183,9 +210,11 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         .setScrollFactor(0);
     }
 
-    update() {
-      this.player.update();
-      this.nameplates.forEach((nameplate) => nameplate.update());
+    update(time: number, delta: number) {
+      this.player.update(delta);
+      this.enemies.forEach((enemy) => enemy.update(delta));
+      this.enemyCombats.forEach((combat) => combat.update(delta));
+      this.entityLabels.forEach((label) => label.update());
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
       }
