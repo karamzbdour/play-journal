@@ -52,6 +52,7 @@ class GameConfig(BaseModel):
     bosses : List[str]
     weapon : str
     theme_song : str
+    length : int = Field(ge=1, le=10, description="Length of the game in minutes")
 
     @field_validator("background_color", "enemy_color")
     @classmethod
@@ -109,7 +110,7 @@ def generate_game(entry: JournalEntry):
     try:
         # Call Gemini using Structured Outputs
         response = gemini_client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-3.1-flash-lite',
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
