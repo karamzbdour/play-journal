@@ -131,9 +131,9 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
         this.vignette?.setDisplaySize(gameSize.width, gameSize.height);
       });
 
-      // Extra darkened-edges vignette for the moodiest/saddest tone, layered above the mood tint
+      // Extra colored vignette for moods that call for one, layered above the mood tint
       if (tint.vignette) {
-        this.vignette = addVignette(this, this.scale.width, this.scale.height);
+        this.vignette = addVignette(this, this.scale.width, this.scale.height, tint.vignette);
       }
 
       this.add
