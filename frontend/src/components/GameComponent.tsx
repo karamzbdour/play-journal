@@ -37,6 +37,7 @@ export default function GameComponent({ config }: GameComponentProps) {
         height: initialHeight,
         parent: containerRef.current,
         backgroundColor: config.background_color,
+        pixelArt: true,
         physics: {
           default: "arcade",
           arcade: { gravity: { x: 0, y: 0 }, debug: false },

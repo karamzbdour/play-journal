@@ -2,18 +2,30 @@ import type Phaser from "phaser";
 import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
+import TILE_MAPPING from "../tileMapping";
 
-// Step 1 of the dungeon-crawler rebuild (modeled on
-// https://github.com/mikewesthad/phaser-3-tilemap-blog-posts, post-3): generate a dungeon and
-// draw its rooms as plain rectangles, no tile art yet.
+// Step 1: generate a dungeon (https://github.com/mikewesthad/phaser-3-tilemap-blog-posts, post-3).
 // Step 2: a player (post-1's movement pattern) spawned in the first room, camera follows it.
-// No tile collision yet - the room rectangles are just visuals until real tilemap layers exist.
+// Step 3: a real tilemap layer using the loaded tileset, replacing the rectangle placeholders.
+// Step 4: "better mapping" - proper corner/wall/door tiles per room via TILE_MAPPING, instead of
+// a flat floor/wall/door fill.
+// Step 5: wall collision, via setCollisionByExclusion on the walkable tile indices.
+//
+// Note: weightedRandomize's argument order is (weightedIndexes, x, y, width, height) in this
+// Phaser version - the original tutorial (written against an older Phaser 3.x) has the indexes
+// last, so this isn't a direct copy-paste of that snippet.
 export function createDungeonScene(PhaserLib: typeof Phaser) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
+    private groundLayer!: Phaser.Tilemaps.TilemapLayer;
+    private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
 
     constructor() {
       super("DungeonScene");
+    }
+
+    preload() {
+      this.load.image("tiles", "/tilesets/buch-tileset-48px.png");
     }
 
     create() {
@@ -28,31 +40,72 @@ export function createDungeonScene(PhaserLib: typeof Phaser) {
         },
       });
 
-      const graphics = this.add.graphics();
-      dungeon.rooms.forEach((room) => {
-        const x = room.x * TILE_SIZE;
-        const y = room.y * TILE_SIZE;
-        const w = room.width * TILE_SIZE;
-        const h = room.height * TILE_SIZE;
-
-        graphics.fillStyle(0x2dd4bf, 0.25);
-        graphics.fillRect(x, y, w, h);
-        graphics.lineStyle(2, 0x2dd4bf, 1);
-        graphics.strokeRect(x, y, w, h);
+      // Create a blank map matching the dungeon's dimensions
+      const map = this.make.tilemap({
+        tileWidth: TILE_SIZE,
+        tileHeight: TILE_SIZE,
+        width: dungeon.width,
+        height: dungeon.height,
       });
 
-      const worldWidth = dungeon.width * TILE_SIZE;
-      const worldHeight = dungeon.height * TILE_SIZE;
-      this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+      // Non-extruded tileset - no margin/spacing baked in
+      const tileset = map.addTilesetImage("tiles", undefined, TILE_SIZE, TILE_SIZE, 0, 0)!;
+      this.groundLayer = map.createBlankLayer("Ground", tileset)!;
+      // Second layer for items/decorations (chests, pots, towers, stairs) - empty for now
+      this.stuffLayer = map.createBlankLayer("Stuff", tileset)!;
+
+      // Fill each room with floor, corner, wall and door tiles from TILE_MAPPING
+      dungeon.rooms.forEach((room) => {
+        const { x, y, width, height, left, right, top, bottom } = room;
+
+        // Floor: mostly clean tiles, occasionally a dirty one
+        this.groundLayer.weightedRandomize(TILE_MAPPING.FLOOR, x, y, width, height);
+
+        // Room corners
+        this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_LEFT, left, top);
+        this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_RIGHT, right, top);
+        this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_RIGHT, right, bottom);
+        this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_LEFT, left, bottom);
+
+        // Walls: mostly clean tiles, occasionally a dirty one
+        this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.TOP, left + 1, top, width - 2, 1);
+        this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.BOTTOM, left + 1, bottom, width - 2, 1);
+        this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.LEFT, left, top + 1, 1, height - 2);
+        this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.RIGHT, right, top + 1, 1, height - 2);
+
+        // Doors punch through the wall at the room's connection points to its neighbors
+        const doors = room.getDoorLocations();
+        for (let i = 0; i < doors.length; i++) {
+          if (doors[i].y === 0) {
+            this.groundLayer.putTilesAt(TILE_MAPPING.DOOR.TOP, x + doors[i].x - 1, y + doors[i].y);
+          } else if (doors[i].y === room.height - 1) {
+            this.groundLayer.putTilesAt(TILE_MAPPING.DOOR.BOTTOM, x + doors[i].x - 1, y + doors[i].y);
+          } else if (doors[i].x === 0) {
+            this.groundLayer.putTilesAt(TILE_MAPPING.DOOR.LEFT, x + doors[i].x, y + doors[i].y - 1);
+          } else if (doors[i].x === room.width - 1) {
+            this.groundLayer.putTilesAt(TILE_MAPPING.DOOR.RIGHT, x + doors[i].x, y + doors[i].y - 1);
+          }
+        }
+      });
+
+      // Everything except empty tiles and floor variants should block movement
+      this.groundLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
+      this.stuffLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
+
+      this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+      this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
       const startRoom = dungeon.rooms[0];
-      const playerX = startRoom.centerX * TILE_SIZE;
-      const playerY = startRoom.centerY * TILE_SIZE;
+      const playerX = map.tileToWorldX(startRoom.centerX)!;
+      const playerY = map.tileToWorldY(startRoom.centerY)!;
       this.player = new Player(this, playerX, playerY);
       this.cameras.main.startFollow(this.player.sprite, true);
 
+      this.physics.add.collider(this.player.sprite, this.groundLayer);
+      this.physics.add.collider(this.player.sprite, this.stuffLayer);
+
       this.add
-        .text(10, 10, `${dungeon.rooms.length} rooms generated`, {
+        .text(100, 10, `${dungeon.rooms.length} rooms generated`, {
           fontSize: "14px",
           fontFamily: "monospace",
           color: "#e2e8f0",
