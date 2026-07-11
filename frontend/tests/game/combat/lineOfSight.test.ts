@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isWithinRange, hasLineOfSight, LineOfSightBlocker } from "./lineOfSight";
+import { isWithinRange, hasLineOfSight, LineOfSightBlocker } from "@/game/combat/lineOfSight";
 
 describe("isWithinRange", () => {
   it("is true when the distance is less than the max range", () => {

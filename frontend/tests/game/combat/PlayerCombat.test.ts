@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import PlayerCombat, { AttackInput } from "./PlayerCombat";
-import { CombatEntity } from "./EnemyCombat";
-import StatusEffectController from "./StatusEffectController";
-import { LineOfSightBlocker } from "./lineOfSight";
-import { Weapon } from "./Weapon";
+import PlayerCombat, { AttackInput } from "@/game/combat/PlayerCombat";
+import { CombatEntity } from "@/game/combat/EnemyCombat";
+import StatusEffectController from "@/game/combat/StatusEffectController";
+import { LineOfSightBlocker } from "@/game/combat/lineOfSight";
+import { Weapon } from "@/game/combat/Weapon";
 
 const OPEN_BLOCKER: LineOfSightBlocker = { isBlocked: () => false };
 const BLOCKED_BLOCKER: LineOfSightBlocker = { isBlocked: () => true };

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import StatusEffectController from "./StatusEffectController";
+import StatusEffectController from "@/game/combat/StatusEffectController";
 
 describe("StatusEffectController", () => {
   let controller: StatusEffectController;
