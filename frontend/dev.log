@@ -1,0 +1,42 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.84:3000
+✓ Ready in 502ms
+
+○ Compiling / ...
+ GET / 200 in 6.2s (next.js: 5.9s, application-code: 322ms)
+ GET / 200 in 85ms (next.js: 8ms, application-code: 77ms)
+ GET / 200 in 55ms (next.js: 5ms, application-code: 50ms)
+ GET / 200 in 42ms (next.js: 4ms, application-code: 38ms)
+[browser] TypeError: Failed to fetch
+    at handleGenerateGame (src/app/page.tsx:66:30)
+  64 |
+  65 |     try {
+> 66 |       const response = await fetch("http://localhost:8000/api/generate-game", {
+     |                              ^
+  67 |         method: "POST",
+  68 |         headers: { "Content-Type": "application/json" },
+  69 |         body: JSON.stringify({ text: journalText }), (src/app/page.tsx:84:15)
+[browser] TypeError: Failed to fetch
+    at handleGenerateGame (src/app/page.tsx:66:30)
+  64 |
+  65 |     try {
+> 66 |       const response = await fetch("http://localhost:8000/api/generate-game", {
+     |                              ^
+  67 |         method: "POST",
+  68 |         headers: { "Content-Type": "application/json" },
+  69 |         body: JSON.stringify({ text: journalText }), (src/app/page.tsx:84:15)
+[browser] TypeError: Failed to fetch
+    at handleGenerateGame (src/app/page.tsx:66:30)
+  64 |
+  65 |     try {
+> 66 |       const response = await fetch("http://localhost:8000/api/generate-game", {
+     |                              ^
+  67 |         method: "POST",
+  68 |         headers: { "Content-Type": "application/json" },
+  69 |         body: JSON.stringify({ text: journalText }), (src/app/page.tsx:84:15)
+[?25h
