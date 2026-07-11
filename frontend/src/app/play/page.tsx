@@ -10,7 +10,7 @@ import { loadGameConfig, clearGameConfig } from "@/lib/gameSession";
 const GameComponent = dynamic(() => import("../../components/GameComponent"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[300px] flex items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/80 backdrop-blur-md">
+    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-slate-950/80 backdrop-blur-md">
       <div className="text-center space-y-3">
         <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
         <p className="text-slate-400 text-sm animate-pulse">Loading Phaser Game Engine...</p>

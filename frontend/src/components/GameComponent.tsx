@@ -82,7 +82,7 @@ export default function GameComponent({ config }: GameComponentProps) {
   }, [config]);
 
   return (
-    <div className="w-full h-full min-h-[400px] relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+    <div className="w-full h-full min-h-[400px] relative overflow-hidden bg-slate-950">
       <div ref={containerRef} className="w-full h-full min-h-[400px] block" />
     </div>
   );
