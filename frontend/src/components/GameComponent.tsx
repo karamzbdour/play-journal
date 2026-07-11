@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { GameConfig } from "@/types/game";
 import { createDungeonScene } from "@/game/scenes/DungeonScene";
+import { getMoodBackground } from "@/lib/moodTint";
 
 interface GameComponentProps {
   config: GameConfig;
@@ -36,7 +37,7 @@ export default function GameComponent({ config }: GameComponentProps) {
         width: initialWidth,
         height: initialHeight,
         parent: containerRef.current,
-        backgroundColor: config.background_color,
+        backgroundColor: getMoodBackground(config.mood),
         pixelArt: true,
         physics: {
           default: "arcade",
