@@ -11,9 +11,14 @@ export interface StatusEffectSource {
   getRemainingRatio(effectId: string): number;
 }
 
+export interface HealthSource {
+  getRatio(): number;
+}
+
 export interface EntityLabelOptions {
   name?: string;
   statusEffects?: StatusEffectSource;
+  health?: HealthSource;
   offsetY?: number;
   color?: string;
   fontSize?: string;
@@ -28,6 +33,13 @@ const BADGE_LINE_HEIGHT = 19;
 const BAR_WIDTH = 40;
 const BAR_HEIGHT = 3;
 const BAR_GAP = 2;
+const HP_BAR_WIDTH = 44;
+const HP_BAR_HEIGHT = 6;
+const HP_BAR_COLOR = 0x22c55e;
+const HP_BAR_BG_COLOR = 0x000000;
+const HP_BAR_BG_ALPHA = 0.5;
+const NAME_TO_HP_GAP = 8;
+const HP_TO_BADGE_GAP = 8;
 
 export function diffBadgeIds(previous: string[], current: string[]): { added: string[]; removed: string[] } {
   const previousSet = new Set(previous);
@@ -45,6 +57,9 @@ export default class EntityLabel {
   private offsetY: number;
   private nameText?: Phaser.GameObjects.Text;
   private statusEffects?: StatusEffectSource;
+  private health?: HealthSource;
+  private healthBarBg?: Phaser.GameObjects.Rectangle;
+  private healthBarFill?: Phaser.GameObjects.Rectangle;
   private badgeTexts: Map<string, Phaser.GameObjects.Text> = new Map();
   private badgeBars: Map<string, Phaser.GameObjects.Rectangle> = new Map();
   private activeBadgeIds: string[] = [];
@@ -55,6 +70,7 @@ export default class EntityLabel {
     this.target = target;
     this.offsetY = options.offsetY ?? DEFAULT_OFFSET_Y;
     this.statusEffects = options.statusEffects;
+    this.health = options.health;
 
     if (options.name) {
       this.nameText = scene.add
@@ -67,10 +83,26 @@ export default class EntityLabel {
         })
         .setOrigin(0.5, 1);
     }
+
+    if (this.health) {
+      const barY = target.y - this.healthBarOffsetY();
+      this.healthBarBg = scene.add
+        .rectangle(target.x, barY, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_BG_COLOR, HP_BAR_BG_ALPHA)
+        .setOrigin(0.5, 0.5);
+      this.healthBarFill = scene.add
+        .rectangle(target.x - HP_BAR_WIDTH / 2, barY, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_COLOR)
+        .setOrigin(0, 0.5);
+    }
+  }
+
+  private healthBarOffsetY(): number {
+    return this.offsetY + (this.nameText ? NAME_TO_HP_GAP : 0);
   }
 
   private badgeRowOffsetY(): number {
-    return this.nameText ? this.offsetY + BADGE_STACK_GAP : this.offsetY;
+    if (this.health) return this.healthBarOffsetY() + HP_TO_BADGE_GAP;
+    if (this.nameText) return this.offsetY + BADGE_STACK_GAP;
+    return this.offsetY;
   }
 
   private syncBadges() {
@@ -127,12 +159,22 @@ export default class EntityLabel {
     if (this.nameText) {
       this.nameText.setPosition(this.target.x, this.target.y - this.offsetY);
     }
+
+    if (this.health && this.healthBarBg && this.healthBarFill) {
+      const barY = this.target.y - this.healthBarOffsetY();
+      this.healthBarBg.setPosition(this.target.x, barY);
+      this.healthBarFill.setPosition(this.target.x - HP_BAR_WIDTH / 2, barY);
+      this.healthBarFill.width = HP_BAR_WIDTH * Math.max(0, Math.min(1, this.health.getRatio()));
+    }
+
     this.syncBadges();
     this.layoutBadges();
   }
 
   destroy() {
     this.nameText?.destroy();
+    this.healthBarBg?.destroy();
+    this.healthBarFill?.destroy();
     this.badgeTexts.forEach((text) => text.destroy());
     this.badgeTexts.clear();
     this.badgeBars.forEach((bar) => bar.destroy());

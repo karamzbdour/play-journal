@@ -140,10 +140,14 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       this.enemies = [enemy];
 
       this.entityLabels = [
-        new EntityLabel(this, fontFamily, this.player.sprite, { statusEffects: this.player.statusEffects }),
+        new EntityLabel(this, fontFamily, this.player.sprite, {
+          statusEffects: this.player.statusEffects,
+          health: this.player.health,
+        }),
         new EntityLabel(this, fontFamily, enemy.sprite, {
           name: prettifyName(config.enemy_type),
           statusEffects: enemy.statusEffects,
+          health: enemy.health,
         }),
       ];
 
