@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import { GameConfig } from "@/types/game";
+import { getPalette } from "@/lib/theme";
+import { mockGameConfig } from "@/lib/mockGameConfig";
 
 // Dynamically import the Phaser component with SSR disabled
 const GameComponent = dynamic(() => import("../components/GameComponent"), {
@@ -15,31 +18,6 @@ const GameComponent = dynamic(() => import("../components/GameComponent"), {
     </div>
   ),
 });
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-}
-
-interface GameConfig {
-  theme_id: string;
-  theme_name: string;
-  background_color: string;
-  player_sprite: string;
-  player_color: string;
-  player_speed: number;
-  collectible_type: string;
-  collectible_color: string;
-  enemy_type: string;
-  enemy_color: string;
-  spawn_rate: number;
-  win_score: number;
-  mood: string;
-  game_rules: string;
-  achievements: Achievement[];
-}
 
 interface WSLog {
   timestamp: string;
@@ -60,6 +38,7 @@ export default function Home() {
   // Game state
   const [currentScore, setCurrentScore] = useState(0);
   const [gameWon, setGameWon] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(1);
   
   // WebSocket states
   const [wsActive, setWsActive] = useState(false);
@@ -81,6 +60,7 @@ export default function Home() {
     setError(null);
     setGameWon(false);
     setCurrentScore(0);
+    setCurrentLevel(1);
 
     try {
       const response = await fetch("http://localhost:8000/api/generate-game", {
@@ -95,7 +75,7 @@ export default function Home() {
 
       const data: GameConfig = await response.json();
       setGameConfig(data);
-      
+
       // Auto-connect WS when a game is successfully generated
       if (!wsActive) {
         connectWebSocket();
@@ -105,6 +85,19 @@ export default function Home() {
       setError("Could not connect to the backend server. Please make sure the FastAPI server is running on http://localhost:8000.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Loads a local fixture matching the current GameConfig schema, bypassing the backend.
+  // Useful while the LLM-driven /api/generate-game endpoint hasn't caught up to the schema yet.
+  const handlePreviewMock = () => {
+    setError(null);
+    setGameWon(false);
+    setCurrentScore(0);
+    setCurrentLevel(1);
+    setGameConfig(mockGameConfig);
+    if (!wsActive) {
+      connectWebSocket();
     }
   };
 
@@ -196,6 +189,13 @@ export default function Home() {
     addLog("achievement", "Mission Complete: You completed the level!", "VICTORY");
   };
 
+  const handleLevelUpdate = (level: number, totalLevels: number) => {
+    setCurrentLevel(level);
+    if (level > 1) {
+      addLog("info", `Level ${level} / ${totalLevels} reached!`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
       {/* Background radial gradient decoration */}
@@ -273,6 +273,13 @@ export default function Home() {
                 {error}
               </div>
             )}
+
+            <button
+              onClick={handlePreviewMock}
+              className="w-full rounded-xl border border-dashed border-slate-800 py-2 text-xs font-medium text-slate-500 hover:text-slate-300 hover:border-slate-700 transition"
+            >
+              Preview with mock data (skips backend) 🧪
+            </button>
           </div>
 
           {/* Quick presets helper */}
@@ -315,14 +322,21 @@ export default function Home() {
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Replay Arena</span>
                     <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
                       {gameConfig.theme_name}
-                      <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded-md" 
-                            style={{ backgroundColor: gameConfig.player_color + "15", color: gameConfig.player_color }}>
+                      <span
+                        className="px-2 py-0.5 text-[10px] uppercase font-bold rounded-md"
+                        style={{
+                          backgroundColor: getPalette(gameConfig.theme_id).playerColor + "15",
+                          color: getPalette(gameConfig.theme_id).playerColor,
+                        }}
+                      >
                         {gameConfig.mood}
                       </span>
                     </h2>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block uppercase">Level Progress</span>
+                  <div className="text-right space-y-1">
+                    <span className="text-xs text-slate-400 block uppercase">
+                      Level {currentLevel} / {gameConfig.levels}
+                    </span>
                     <span className="text-xl font-mono font-bold text-white">
                       {currentScore} <span className="text-slate-600">/</span> {gameConfig.win_score}
                     </span>
@@ -332,7 +346,24 @@ export default function Home() {
                 {/* Rules description */}
                 <div className="p-3 bg-slate-950 border border-slate-900 rounded-xl text-xs text-slate-400 leading-relaxed">
                   <span className="font-semibold text-slate-300 block mb-1">🎮 How to play:</span>
-                  {gameConfig.game_rules}
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {gameConfig.game_rules.map((rule, i) => (
+                      <li key={i}>{rule}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Roguelite run details */}
+                <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                  <span className="px-2 py-1 rounded-md bg-slate-950 border border-slate-900 text-slate-400">
+                    ⚔️ Weapon: {gameConfig.weapon}
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-slate-950 border border-slate-900 text-slate-400">
+                    👹 Boss: {gameConfig.bosses.join(", ")}
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-slate-950 border border-slate-900 text-slate-400">
+                    🎵 {gameConfig.theme_song}
+                  </span>
                 </div>
 
                 {/* The Phaser Component */}
@@ -340,6 +371,7 @@ export default function Home() {
                   config={gameConfig}
                   onScoreUpdate={handleScoreUpdate}
                   onGameWin={handleGameWin}
+                  onLevelUpdate={handleLevelUpdate}
                 />
 
                 {gameWon && (
