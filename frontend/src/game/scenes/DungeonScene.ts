@@ -29,13 +29,19 @@ function getRoomCount(lengthOfDay: number): number {
   return Math.round(Math.min(10, Math.max(5, lengthOfDay)));
 }
 
+interface EnemyInstance {
+  enemy: Enemy;
+  combat: EnemyCombat;
+  label: EntityLabel;
+}
+
 export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
-    private enemies: Enemy[] = [];
-    private entityLabels: EntityLabel[] = [];
-    private enemyCombats: EnemyCombat[] = [];
+    private playerLabel!: EntityLabel;
+    private enemyInstances: EnemyInstance[] = [];
     private playerCombat!: PlayerCombat;
+    private isPlayerDead = false;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -137,19 +143,11 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyY = map.tileToWorldY(enemyTileY)!;
       // Aggression 3 so the demo reaches all three example attacks (see combat/Attack.ts) over time.
       const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3, 50);
-      this.enemies = [enemy];
 
-      this.entityLabels = [
-        new EntityLabel(this, fontFamily, this.player.sprite, {
-          statusEffects: this.player.statusEffects,
-          health: this.player.health,
-        }),
-        new EntityLabel(this, fontFamily, enemy.sprite, {
-          name: prettifyName(config.enemy_type),
-          statusEffects: enemy.statusEffects,
-          health: enemy.health,
-        }),
-      ];
+      this.playerLabel = new EntityLabel(this, fontFamily, this.player.sprite, {
+        statusEffects: this.player.statusEffects,
+        health: this.player.health,
+      });
 
       const getPlayerTarget = (): CombatEntity => ({
         x: this.player.sprite.x,
@@ -166,20 +164,24 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
           !!this.groundLayer.getTileAtWorldXY(x, y)?.collides || !!this.stuffLayer.getTileAtWorldXY(x, y)?.collides,
       };
 
-      this.enemyCombats = this.enemies.map((e) => {
-        const combatEntity: AggressiveCombatEntity = {
-          get x() {
-            return e.sprite.x;
-          },
-          get y() {
-            return e.sprite.y;
-          },
-          statusEffects: e.statusEffects,
-          health: e.health,
-          aggressionLevel: e.aggressionLevel,
-        };
-        return new EnemyCombat(combatEntity, getPlayerTarget, blocker);
+      const enemyLabel = new EntityLabel(this, fontFamily, enemy.sprite, {
+        name: prettifyName(config.enemy_type),
+        statusEffects: enemy.statusEffects,
+        health: enemy.health,
       });
+      const enemyCombatEntity: AggressiveCombatEntity = {
+        get x() {
+          return enemy.sprite.x;
+        },
+        get y() {
+          return enemy.sprite.y;
+        },
+        statusEffects: enemy.statusEffects,
+        health: enemy.health,
+        aggressionLevel: enemy.aggressionLevel,
+      };
+      const enemyCombat = new EnemyCombat(enemyCombatEntity, getPlayerTarget, blocker);
+      this.enemyInstances = [{ enemy, combat: enemyCombat, label: enemyLabel }];
 
       const self = this;
       const playerSelf: CombatEntity = {
@@ -193,7 +195,12 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         health: this.player.health,
       };
       const getEnemyTargets = (): CombatEntity[] =>
-        this.enemies.map((e) => ({ x: e.sprite.x, y: e.sprite.y, statusEffects: e.statusEffects, health: e.health }));
+        this.enemyInstances.map(({ enemy }) => ({
+          x: enemy.sprite.x,
+          y: enemy.sprite.y,
+          statusEffects: enemy.statusEffects,
+          health: enemy.health,
+        }));
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
         playerSelf,
@@ -242,14 +249,52 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
     }
 
     update(time: number, delta: number) {
+      if (this.isPlayerDead) return;
+
       this.player.update(delta);
-      this.enemies.forEach((enemy) => enemy.update(delta));
-      this.enemyCombats.forEach((combat) => combat.update(delta));
+      this.enemyInstances.forEach(({ enemy }) => enemy.update(delta));
+      this.enemyInstances.forEach(({ combat }) => combat.update(delta));
       this.playerCombat.update(delta);
-      this.entityLabels.forEach((label) => label.update());
+
+      this.removeDeadEnemies();
+
+      this.playerLabel.update();
+      this.enemyInstances.forEach(({ label }) => label.update());
+
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
       }
+
+      if (this.player.health.isDead) {
+        this.handlePlayerDeath();
+      }
+    }
+
+    private removeDeadEnemies() {
+      const alive: EnemyInstance[] = [];
+      for (const instance of this.enemyInstances) {
+        if (instance.enemy.health.isDead) {
+          instance.label.destroy();
+          instance.enemy.sprite.destroy();
+        } else {
+          alive.push(instance);
+        }
+      }
+      this.enemyInstances = alive;
+    }
+
+    private handlePlayerDeath() {
+      this.isPlayerDead = true;
+      this.add
+        .text(this.scale.width / 2, this.scale.height / 2, "YOU DIED", {
+          fontFamily,
+          fontSize: "32px",
+          color: "#ef4444",
+          stroke: "#000000",
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0);
     }
   };
 }
