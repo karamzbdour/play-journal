@@ -6,6 +6,7 @@ import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
 import { getMoodTint } from "@/lib/moodTint";
 import { addVignette } from "../effects/vignette";
+import { addConfetti } from "../effects/confetti";
 
 // Room count scales with the journal entry's length_of_day: use the value directly between
 // 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
@@ -134,6 +135,11 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
       // Extra colored vignette for moods that call for one, layered above the mood tint
       if (tint.vignette) {
         this.vignette = addVignette(this, this.scale.width, this.scale.height, tint.vignette);
+      }
+
+      // Falling confetti for happy days
+      if (tint.confetti) {
+        addConfetti(this, this.scale.width);
       }
 
       this.add
