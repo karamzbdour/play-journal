@@ -9,7 +9,8 @@ import { getMoodTint } from "@/lib/moodTint";
 import { addVignette } from "../effects/vignette";
 import { addConfetti } from "../effects/confetti";
 import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
-import NamePlate from "../ui/NamePlate";
+import EntityLabel from "../ui/EntityLabel";
+import EnemyCombat, { CombatEntity, AggressiveCombatEntity } from "../combat/EnemyCombat";
 
 // "deadline_demon" -> "Deadline Demon"
 function prettifyName(slug: string): string {
@@ -28,21 +29,15 @@ function getRoomCount(lengthOfDay: number): number {
   return Math.round(Math.min(10, Math.max(5, lengthOfDay)));
 }
 
-// Step 1: generate a dungeon (https://github.com/mikewesthad/phaser-3-tilemap-blog-posts, post-3).
-// Step 2: a player (post-1's movement pattern) spawned in the first room, camera follows it.
-// Step 3: a real tilemap layer using the loaded tileset, replacing the rectangle placeholders.
-// Step 4: "better mapping" - proper corner/wall/door tiles per room via TILE_MAPPING, instead of
-// a flat floor/wall/door fill.
-// Step 5: wall collision, via setCollisionByExclusion on the walkable tile indices.
-//
 // Note: weightedRandomize's argument order is (weightedIndexes, x, y, width, height) in this
 // Phaser version - the original tutorial (written against an older Phaser 3.x) has the indexes
 // last, so this isn't a direct copy-paste of that snippet.
 export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
-    private enemy!: Enemy;
-    private nameplates: NamePlate[] = [];
+    private enemies: Enemy[] = [];
+    private entityLabels: EntityLabel[] = [];
+    private enemyCombats: EnemyCombat[] = [];
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -140,9 +135,37 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyTileY = dungeon.rooms[1] ? enemyRoom.centerY : Math.min(enemyRoom.bottom - 1, enemyRoom.centerY + 2);
       const enemyX = map.tileToWorldX(enemyTileX)!;
       const enemyY = map.tileToWorldY(enemyTileY)!;
-      this.enemy = new Enemy(this, enemyX, enemyY, config.enemy_color);
+      // Aggression 3 so the demo reaches all three example attacks (see combat/Attack.ts) over time.
+      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3);
+      this.enemies = [enemy];
 
-      this.nameplates = [new NamePlate(this, fontFamily, this.enemy.sprite, prettifyName(config.enemy_type))];
+      this.entityLabels = [
+        new EntityLabel(this, fontFamily, this.player.sprite, { statusEffects: this.player.statusEffects }),
+        new EntityLabel(this, fontFamily, enemy.sprite, {
+          name: prettifyName(config.enemy_type),
+          statusEffects: enemy.statusEffects,
+        }),
+      ];
+
+      const getPlayerTarget = (): CombatEntity => ({
+        x: this.player.sprite.x,
+        y: this.player.sprite.y,
+        statusEffects: this.player.statusEffects,
+      });
+
+      this.enemyCombats = this.enemies.map((e) => {
+        const combatEntity: AggressiveCombatEntity = {
+          get x() {
+            return e.sprite.x;
+          },
+          get y() {
+            return e.sprite.y;
+          },
+          statusEffects: e.statusEffects,
+          aggressionLevel: e.aggressionLevel,
+        };
+        return new EnemyCombat(combatEntity, getPlayerTarget);
+      });
 
       // Full-screen mood tint over the whole level, so the run feels different depending on
       // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
@@ -183,9 +206,11 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         .setScrollFactor(0);
     }
 
-    update() {
-      this.player.update();
-      this.nameplates.forEach((nameplate) => nameplate.update());
+    update(time: number, delta: number) {
+      this.player.update(delta);
+      this.enemies.forEach((enemy) => enemy.update(delta));
+      this.enemyCombats.forEach((combat) => combat.update(delta));
+      this.entityLabels.forEach((label) => label.update());
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
       }
