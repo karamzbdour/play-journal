@@ -14,8 +14,8 @@ export default function NavBar() {
     setMounted(true);
   }, []);
 
-  // Do not render NavBar on the login page
-  if (pathname === "/login") return null;
+  // Do not render NavBar on the login or play pages
+  if (pathname === "/login" || pathname === "/play") return null;
 
   const handleLogout = () => {
     clearAuthToken();
