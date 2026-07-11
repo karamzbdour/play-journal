@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { GameConfig } from "@/types/game";
 import { createDungeonScene } from "@/game/scenes/DungeonScene";
 import { getMoodBackground } from "@/lib/moodTint";
+import { silkscreen } from "@/lib/fonts";
 
 interface GameComponentProps {
   config: GameConfig;
@@ -27,7 +28,7 @@ export default function GameComponent({ config }: GameComponentProps) {
     import("phaser").then((Phaser) => {
       if (isDestroyed) return;
 
-      const DungeonScene = createDungeonScene(Phaser, config);
+      const DungeonScene = createDungeonScene(Phaser, config, silkscreen.style.fontFamily);
 
       const initialWidth = containerRef.current?.clientWidth || 800;
       const initialHeight = containerRef.current?.clientHeight || 600;

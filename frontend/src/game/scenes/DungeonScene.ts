@@ -2,12 +2,22 @@ import type Phaser from "phaser";
 import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
+import Enemy from "../entities/Enemy";
 import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
 import { getMoodTint } from "@/lib/moodTint";
 import { addVignette } from "../effects/vignette";
 import { addConfetti } from "../effects/confetti";
 import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
+import NamePlate from "../ui/NamePlate";
+
+// "deadline_demon" -> "Deadline Demon"
+function prettifyName(slug: string): string {
+  return slug
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 // Room count scales with the journal entry's length_of_day: use the value directly between
 // 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
@@ -28,9 +38,11 @@ function getRoomCount(lengthOfDay: number): number {
 // Note: weightedRandomize's argument order is (weightedIndexes, x, y, width, height) in this
 // Phaser version - the original tutorial (written against an older Phaser 3.x) has the indexes
 // last, so this isn't a direct copy-paste of that snippet.
-export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig) {
+export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
+    private enemy!: Enemy;
+    private nameplates: NamePlate[] = [];
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -121,6 +133,20 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
       this.physics.add.collider(this.player.sprite, this.groundLayer);
       this.physics.add.collider(this.player.sprite, this.stuffLayer);
 
+      // Static demo enemy: a second room if the dungeon generated one, otherwise a point offset
+      // from the player's spawn within the same room so the two don't overlap.
+      const enemyRoom = dungeon.rooms[1] ?? startRoom;
+      const enemyTileX = dungeon.rooms[1] ? enemyRoom.centerX : Math.min(enemyRoom.right - 1, enemyRoom.centerX + 2);
+      const enemyTileY = dungeon.rooms[1] ? enemyRoom.centerY : Math.min(enemyRoom.bottom - 1, enemyRoom.centerY + 2);
+      const enemyX = map.tileToWorldX(enemyTileX)!;
+      const enemyY = map.tileToWorldY(enemyTileY)!;
+      this.enemy = new Enemy(this, enemyX, enemyY, config.enemy_color);
+
+      this.nameplates = [
+        new NamePlate(this, fontFamily, this.player.sprite, "Player"),
+        new NamePlate(this, fontFamily, this.enemy.sprite, prettifyName(config.enemy_type)),
+      ];
+
       // Full-screen mood tint over the whole level, so the run feels different depending on
       // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
       const tint = getMoodTint(config.mood);
@@ -162,6 +188,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
 
     update() {
       this.player.update();
+      this.nameplates.forEach((nameplate) => nameplate.update());
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
       }
