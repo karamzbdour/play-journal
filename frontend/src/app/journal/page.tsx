@@ -18,7 +18,7 @@ export default function JournalPage() {
   }, [router]);
 
   return (
-    <div className="tome-scene flex flex-col items-center justify-start min-h-screen px-4 pt-8 pb-12 overflow-y-auto">
+    <div className="tome-scene flex flex-col items-center justify-start min-h-screen px-4 pt-28 pb-12 overflow-y-auto">
       <div 
         className="w-full max-w-2xl p-8 border-2 rounded-lg shadow-2xl relative z-10 flex flex-col gap-6"
         style={{

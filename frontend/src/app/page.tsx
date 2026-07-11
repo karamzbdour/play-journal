@@ -99,7 +99,7 @@ export default function Home() {
   }, [memories, journalText, loading, error]);
 
   return (
-    <div className="tome-scene flex flex-col items-center justify-center gap-3 px-3">
+    <div className="tome-scene flex flex-col items-center justify-center gap-3 px-3 pt-24">
       <div className="tome-embers" aria-hidden />
 
       <header className="text-center relative z-10">
