@@ -28,7 +28,6 @@ const DEFAULT_OFFSET_Y = 18;
 const DEFAULT_COLOR = "#f8fafc";
 const DEFAULT_FONT_SIZE = "12px";
 const BADGE_FONT_SIZE = "10px";
-const BADGE_STACK_GAP = 14;
 const BADGE_LINE_HEIGHT = 19;
 const BAR_WIDTH = 40;
 const BAR_HEIGHT = 3;
@@ -38,8 +37,9 @@ const HP_BAR_HEIGHT = 6;
 const HP_BAR_COLOR = 0x22c55e;
 const HP_BAR_BG_COLOR = 0x000000;
 const HP_BAR_BG_ALPHA = 0.5;
-const NAME_TO_HP_GAP = 8;
-const HP_TO_BADGE_GAP = 8;
+// Vertical space each row claims for the rows stacked above it
+const NAME_ROW_HEIGHT = 20;
+const HP_ROW_HEIGHT = 8;
 
 export function diffBadgeIds(previous: string[], current: string[]): { added: string[]; removed: string[] } {
   const previousSet = new Set(previous);
@@ -50,6 +50,10 @@ export function diffBadgeIds(previous: string[], current: string[]): { added: st
   };
 }
 
+// Floating plate above an entity: name, health bar, and one badge (label +
+// timeout bar) per active status effect, stacked upward in that order. Rows
+// only claim space while visible, so hiding the name drops everything above
+// it back down.
 export default class EntityLabel {
   private scene: Phaser.Scene;
   private fontFamily: string;
@@ -74,7 +78,7 @@ export default class EntityLabel {
 
     if (options.name) {
       this.nameText = scene.add
-        .text(target.x, target.y - this.offsetY, options.name, {
+        .text(0, 0, options.name, {
           fontFamily,
           fontSize: options.fontSize ?? DEFAULT_FONT_SIZE,
           color: options.color ?? DEFAULT_COLOR,
@@ -85,26 +89,28 @@ export default class EntityLabel {
     }
 
     if (this.health) {
-      const barY = target.y - this.healthBarOffsetY();
       this.healthBarBg = scene.add
-        .rectangle(target.x, barY, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_BG_COLOR, HP_BAR_BG_ALPHA)
+        .rectangle(0, 0, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_BG_COLOR, HP_BAR_BG_ALPHA)
         .setOrigin(0.5, 0.5);
       this.healthBarFill = scene.add
-        .rectangle(target.x - HP_BAR_WIDTH / 2, barY, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_COLOR)
+        .rectangle(0, 0, HP_BAR_WIDTH, HP_BAR_HEIGHT, HP_BAR_COLOR)
         .setOrigin(0, 0.5);
     }
+
+    this.update();
   }
 
-  private healthBarOffsetY(): number {
-    return this.offsetY + (this.nameText ? NAME_TO_HP_GAP : 0);
+  setNameVisible(visible: boolean) {
+    this.nameText?.setVisible(visible);
+    this.layout();
   }
 
-  private badgeRowOffsetY(): number {
-    if (this.health) return this.healthBarOffsetY() + HP_TO_BADGE_GAP;
-    if (this.nameText) return this.offsetY + BADGE_STACK_GAP;
-    return this.offsetY;
+  update() {
+    this.syncBadges();
+    this.layout();
   }
 
+  // Create/destroy badge objects to match the currently active effect ids
   private syncBadges() {
     if (!this.statusEffects) return;
     const currentIds = this.statusEffects.getActiveIds();
@@ -140,39 +146,32 @@ export default class EntityLabel {
     this.activeBadgeIds = currentIds;
   }
 
-  private layoutBadges() {
-    const baseY = this.target.y - this.badgeRowOffsetY();
+  // Position every row relative to the target. The cursor starts just above
+  // the entity's head and moves up past each visible row.
+  private layout() {
+    let y = this.target.y - this.offsetY;
+
+    if (this.nameText?.visible) {
+      this.nameText.setPosition(this.target.x, y);
+      y -= NAME_ROW_HEIGHT;
+    }
+
+    if (this.healthBarBg && this.healthBarFill && this.health) {
+      this.healthBarBg.setPosition(this.target.x, y);
+      this.healthBarFill.setPosition(this.target.x - HP_BAR_WIDTH / 2, y);
+      this.healthBarFill.width = HP_BAR_WIDTH * Math.max(0, Math.min(1, this.health.getRatio()));
+      y -= HP_ROW_HEIGHT;
+    }
 
     this.activeBadgeIds.forEach((id, i) => {
-      const textY = baseY - i * BADGE_LINE_HEIGHT;
-      const text = this.badgeTexts.get(id)!;
-      text.setPosition(this.target.x, textY);
+      const textY = y - i * BADGE_LINE_HEIGHT;
+      this.badgeTexts.get(id)!.setPosition(this.target.x, textY);
 
       const bar = this.badgeBars.get(id)!;
       const ratio = this.statusEffects?.getRemainingRatio(id) ?? 1;
       bar.setPosition(this.target.x - BAR_WIDTH / 2, textY + BAR_GAP + BAR_HEIGHT / 2);
       bar.width = BAR_WIDTH * ratio;
     });
-  }
-
-  setNameVisible(visible: boolean) {
-    this.nameText?.setVisible(visible);
-  }
-
-  update() {
-    if (this.nameText) {
-      this.nameText.setPosition(this.target.x, this.target.y - this.offsetY);
-    }
-
-    if (this.health && this.healthBarBg && this.healthBarFill) {
-      const barY = this.target.y - this.healthBarOffsetY();
-      this.healthBarBg.setPosition(this.target.x, barY);
-      this.healthBarFill.setPosition(this.target.x - HP_BAR_WIDTH / 2, barY);
-      this.healthBarFill.width = HP_BAR_WIDTH * Math.max(0, Math.min(1, this.health.getRatio()));
-    }
-
-    this.syncBadges();
-    this.layoutBadges();
   }
 
   destroy() {
