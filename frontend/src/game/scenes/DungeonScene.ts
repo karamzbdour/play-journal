@@ -4,6 +4,8 @@ import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
 import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
+import { getMoodTint } from "@/lib/moodTint";
+import { addVignette } from "../effects/vignette";
 
 // Room count scales with the journal entry's length_of_day: use the value directly between
 // 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
@@ -29,6 +31,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
     private player!: Player;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
+    private moodOverlay!: Phaser.GameObjects.Rectangle;
+    private vignette?: Phaser.GameObjects.Image;
 
     constructor() {
       super("DungeonScene");
@@ -113,6 +117,24 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig)
 
       this.physics.add.collider(this.player.sprite, this.groundLayer);
       this.physics.add.collider(this.player.sprite, this.stuffLayer);
+
+      // Full-screen mood tint over the whole level, so the run feels different depending on
+      // whether the journal entry read as a good day or a bad one (see src/lib/moodTint.ts).
+      const tint = getMoodTint(config.mood);
+      this.moodOverlay = this.add
+        .rectangle(0, 0, this.scale.width, this.scale.height, tint.color, tint.alpha)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setBlendMode(tint.blendMode);
+      this.scale.on(PhaserLib.Scale.Events.RESIZE, (gameSize: { width: number; height: number }) => {
+        this.moodOverlay.setSize(gameSize.width, gameSize.height);
+        this.vignette?.setDisplaySize(gameSize.width, gameSize.height);
+      });
+
+      // Extra darkened-edges vignette for the moodiest/saddest tone, layered above the mood tint
+      if (tint.vignette) {
+        this.vignette = addVignette(this, this.scale.width, this.scale.height);
+      }
 
       this.add
         .text(100, 10, `${dungeon.rooms.length} rooms generated`, {
