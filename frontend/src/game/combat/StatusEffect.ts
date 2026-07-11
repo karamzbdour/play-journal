@@ -30,4 +30,17 @@ export const STATUS_EFFECTS: Record<string, StatusEffectDefinition> = {
     tags: ["buff"],
     blocksTags: ["cc"],
   },
+  bonus_damage: {
+    id: "bonus_damage",
+    label: "BONUS DMG",
+    color: "#f87171",
+    tags: ["buff"],
+    magnitude: 10,
+  },
+  charge_time: {
+    id: "charge_time",
+    label: "CHARGING",
+    color: "#fb923c",
+    tags: ["debuff"],
+  },
 };
