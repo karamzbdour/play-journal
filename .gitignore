@@ -75,3 +75,6 @@ pyrightconfig.json
 *.sw?
 .cursorignore
 .cursorindexingignore
+
+# Local git worktrees used for isolated feature execution
+.worktrees/
