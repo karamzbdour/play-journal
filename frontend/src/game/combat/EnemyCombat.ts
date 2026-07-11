@@ -1,5 +1,7 @@
 import { ATTACKS, AttackDefinition } from "./Attack";
 import StatusEffectController from "./StatusEffectController";
+import { LineOfSightBlocker, isWithinRange, hasLineOfSight } from "./lineOfSight";
+import { TILE_SIZE } from "../constants";
 
 export interface CombatEntity {
   x: number;
@@ -48,6 +50,7 @@ export default class EnemyCombat {
   constructor(
     private enemy: AggressiveCombatEntity,
     private getTarget: () => CombatEntity,
+    private blocker: LineOfSightBlocker,
     options?: { trigger?: AttackTrigger; selector?: AttackSelector }
   ) {
     this.trigger = options?.trigger ?? defaultTrigger;
@@ -67,7 +70,23 @@ export default class EnemyCombat {
     if (!this.trigger(this.enemy, target, this.timeSinceLastAttempt)) return;
     this.timeSinceLastAttempt = 0;
 
-    const available = getAvailableAttacks(this.enemy.aggressionLevel, this.cooldowns);
+    const byAggressionAndCooldown = getAvailableAttacks(this.enemy.aggressionLevel, this.cooldowns);
+    const available = byAggressionAndCooldown.filter((attack) => {
+      if (
+        attack.maxRangeTiles !== undefined &&
+        !isWithinRange(this.enemy.x, this.enemy.y, target.x, target.y, attack.maxRangeTiles * TILE_SIZE)
+      ) {
+        return false;
+      }
+      if (
+        attack.requiresLineOfSight &&
+        !hasLineOfSight(this.blocker, this.enemy.x, this.enemy.y, target.x, target.y)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
     const chosen = this.selector(this.enemy, available);
     if (!chosen) return;
 
