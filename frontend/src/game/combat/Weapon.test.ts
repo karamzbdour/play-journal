@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { CATEGORY_BASE_STATS, randomAttackCount, pickUnique, generateWeapon } from "./Weapon";
+import { CATEGORY_BASE_STATS, randomAttackCount, randomWeaponCategory, pickUnique, generateWeapon } from "./Weapon";
 import { WEAPON_ATTACKS } from "./WeaponAttack";
 
 describe("CATEGORY_BASE_STATS", () => {
@@ -7,6 +7,20 @@ describe("CATEGORY_BASE_STATS", () => {
     expect(CATEGORY_BASE_STATS.melee.rangeTiles).toBeLessThan(CATEGORY_BASE_STATS.longMelee.rangeTiles);
     expect(CATEGORY_BASE_STATS.melee.attackSpeedMs).toBeLessThan(CATEGORY_BASE_STATS.longMelee.attackSpeedMs);
     expect(CATEGORY_BASE_STATS.melee.damage).toBeGreaterThan(CATEGORY_BASE_STATS.longMelee.damage);
+  });
+});
+
+describe("randomWeaponCategory", () => {
+  it("returns melee when the roll is below 0.5", () => {
+    const spy = vi.spyOn(Math, "random").mockReturnValue(0.1);
+    expect(randomWeaponCategory()).toBe("melee");
+    spy.mockRestore();
+  });
+
+  it("returns longMelee when the roll is 0.5 or above", () => {
+    const spy = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    expect(randomWeaponCategory()).toBe("longMelee");
+    spy.mockRestore();
   });
 });
 
