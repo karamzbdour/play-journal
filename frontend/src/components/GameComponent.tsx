@@ -26,7 +26,7 @@ export default function GameComponent({ config }: GameComponentProps) {
     import("phaser").then((Phaser) => {
       if (isDestroyed) return;
 
-      const DungeonScene = createDungeonScene(Phaser);
+      const DungeonScene = createDungeonScene(Phaser, config);
 
       const initialWidth = containerRef.current?.clientWidth || 800;
       const initialHeight = containerRef.current?.clientHeight || 600;

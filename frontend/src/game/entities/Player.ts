@@ -4,7 +4,7 @@ import type Phaser from "phaser";
 // https://github.com/mikewesthad/phaser-3-tilemap-blog-posts (post-1): arcade physics body,
 // 4-directional cursor input, velocity normalized so diagonal movement isn't faster.
 // No sprite/atlas assets yet, so the player is a plain circle for now.
-const PLAYER_SPEED = 175;
+const PLAYER_SPEED = 350;
 
 export default class Player {
   public sprite: Phaser.GameObjects.Arc;

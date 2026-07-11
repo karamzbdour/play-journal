@@ -3,6 +3,16 @@ import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
 import TILE_MAPPING from "../tileMapping";
+import { GameConfig } from "@/types/game";
+
+// Room count scales with the journal entry's length_of_day: use the value directly between
+// 6-10, clamp to 10 above that, and clamp to 5 at or below 5. Falls back to 5 if the value is
+// missing or not a real number (e.g. a backend response that predates this field) - otherwise
+// Math.max/min would propagate NaN into Dungeon's maxRooms and silently cap generation at 1 room.
+function getRoomCount(lengthOfDay: number): number {
+  if (!Number.isFinite(lengthOfDay)) return 5;
+  return Math.round(Math.min(10, Math.max(5, lengthOfDay)));
+}
 
 // Step 1: generate a dungeon (https://github.com/mikewesthad/phaser-3-tilemap-blog-posts, post-3).
 // Step 2: a player (post-1's movement pattern) spawned in the first room, camera follows it.
@@ -14,7 +24,7 @@ import TILE_MAPPING from "../tileMapping";
 // Note: weightedRandomize's argument order is (weightedIndexes, x, y, width, height) in this
 // Phaser version - the original tutorial (written against an older Phaser 3.x) has the indexes
 // last, so this isn't a direct copy-paste of that snippet.
-export function createDungeonScene(PhaserLib: typeof Phaser) {
+export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
@@ -36,7 +46,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser) {
         rooms: {
           width: { min: 7, max: 15, onlyOdd: true },
           height: { min: 7, max: 15, onlyOdd: true },
-          maxRooms: 10,
+          maxRooms: getRoomCount(config.length_of_day),
         },
       });
 
@@ -65,7 +75,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser) {
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_LEFT, left, top);
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.TOP_RIGHT, right, top);
         this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_RIGHT, right, bottom);
-        this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_LEFT, left, bottom);
+          this.groundLayer.putTileAt(TILE_MAPPING.WALL.BOTTOM_LEFT, left, bottom);
 
         // Walls: mostly clean tiles, occasionally a dirty one
         this.groundLayer.weightedRandomize(TILE_MAPPING.WALL.TOP, left + 1, top, width - 2, 1);

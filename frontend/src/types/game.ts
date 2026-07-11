@@ -15,4 +15,5 @@ export interface GameConfig {
   bosses: string[];
   weapon: string;
   theme_song: string;
+  length_of_day: number;
 }
