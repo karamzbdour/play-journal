@@ -1,10 +1,3 @@
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-}
-
 export interface GameConfig {
   theme_id: string;
   theme_name: string;
@@ -22,5 +15,4 @@ export interface GameConfig {
   bosses: string[];
   weapon: string;
   theme_song: string;
-  achievements: Achievement[];
 }
