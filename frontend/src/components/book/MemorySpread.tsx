@@ -97,7 +97,7 @@ export default function memorySpread(
         The memory
       </div>
       <p
-        className="tome-hand"
+        className="tome-hand tome-ruled"
         style={{ marginTop: "1rem", whiteSpace: "pre-wrap" }}
       >
         {entry.text}

@@ -50,8 +50,39 @@ body {
   inset: 0;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 90% 70% at 50% 108%, rgba(251, 191, 36, 0.09), transparent 60%),
+    /* Glow rising off the desk below the tome */
+    radial-gradient(ellipse 90% 70% at 50% 108%, rgba(251, 191, 36, 0.13), transparent 60%),
+    /* Dark desk surface fading up from the bottom edge */
+    linear-gradient(0deg, rgba(26, 14, 6, 0.9) 0%, rgba(26, 14, 6, 0.35) 9%, transparent 18%),
+    /* Torch sconces flanking the scene */
+    radial-gradient(ellipse 40% 55% at -6% 38%, rgba(251, 146, 60, 0.08), transparent 70%),
+    radial-gradient(ellipse 40% 55% at 106% 38%, rgba(251, 146, 60, 0.08), transparent 70%),
+    /* Mottled stone-wall texture */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.58 0 0 0 0 0.66 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23s)'/%3E%3C/svg%3E"),
     radial-gradient(ellipse 120% 90% at 50% 45%, #101625 0%, #060a13 70%, #030509 100%);
+}
+
+/* Embers drifting up past the torchlight; the tile height must match the
+   background-position travel in embers-rise so the loop is seamless. */
+.tome-embers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.7;
+  background-image:
+    radial-gradient(circle at 90px 680px, rgba(251, 191, 36, 0.6) 0 1.5px, transparent 3px),
+    radial-gradient(circle at 310px 560px, rgba(255, 196, 90, 0.45) 0 1px, transparent 2.5px),
+    radial-gradient(circle at 470px 700px, rgba(251, 191, 36, 0.4) 0 2px, transparent 3.5px),
+    radial-gradient(circle at 200px 340px, rgba(255, 210, 120, 0.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 420px 180px, rgba(251, 191, 36, 0.3) 0 1.5px, transparent 3px),
+    radial-gradient(circle at 40px 120px, rgba(255, 196, 90, 0.25) 0 1px, transparent 2px);
+  background-size: 520px 720px;
+  animation: embers-rise 28s linear infinite;
+}
+
+@keyframes embers-rise {
+  from { background-position: 0 0; }
+  to   { background-position: 40px -720px; }
 }
 
 /* Torchlight breathing over the whole scene */
@@ -86,8 +117,8 @@ body {
 
 .tome {
   position: relative;
-  width: min(1060px, 95vw);
-  height: min(640px, 76vh);
+  width: min(1140px, 92vw);
+  height: min(820px, 84vh);
   padding: 16px;
   border-radius: 6px 10px 10px 6px;
   background:
@@ -285,15 +316,27 @@ body {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(2.1em - 1px),
-    rgba(107, 90, 65, 0.35) calc(2.1em - 1px),
-    rgba(107, 90, 65, 0.35) 2.1em
+    transparent calc(1.7em - 1px),
+    rgba(107, 90, 65, 0.17) calc(1.7em - 1px),
+    rgba(107, 90, 65, 0.17) 1.7em
   );
   color: var(--ink);
   caret-color: var(--ink);
   font-family: var(--font-caveat), cursive;
   font-size: clamp(1.2rem, 2.6vmin, 1.45rem);
-  line-height: 2.1em;
+  line-height: 1.7em;
+}
+
+/* Faint ruling under handwritten text on filled pages; spacing follows the
+   element's own line-height so the ink sits on the lines. */
+.tome-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.6em - 1px),
+    rgba(107, 90, 65, 0.14) calc(1.6em - 1px),
+    rgba(107, 90, 65, 0.14) 1.6em
+  );
 }
 .tome-write:focus { outline: none; }
 .tome-write::placeholder { color: rgba(107, 90, 65, 0.65); }
@@ -320,13 +363,14 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .tome-scene::before { animation: none; }
+  .tome-embers { animation: none; opacity: 0.3; }
   .tome-leaf { transition-duration: 1ms; }
 }
 
 /* Small screens: pages stack vertically, leaf rotation is skipped in JS */
 @media (max-width: 719px) {
   .tome {
-    height: min(82vh, 900px);
+    height: min(86vh, 900px);
     padding: 10px;
   }
   .tome-spread { flex-direction: column; }
