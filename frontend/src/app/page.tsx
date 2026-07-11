@@ -275,32 +275,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* Quick presets helper */}
-          <div className="rounded-2xl border border-slate-900 bg-slate-900/30 p-6 flex flex-col space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Try keyword presets
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setJournalText("Worked hard today. I built features, resolved typescript build errors, drank three coffees, and checked git commits.")}
-                className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
-              >
-                Productive Coder 💻
-              </button>
-              <button
-                onClick={() => setJournalText("It was my birthday! We had a huge party, caught up with friends, danced, drank mocktails, and played games all night.")}
-                className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
-              >
-                Happy Celebration 🎉
-              </button>
-              <button
-                onClick={() => setJournalText("Felt exhausted and sad today. Got stuck in a massive storm with heavy rain, but made hot tea at home and got to rest.")}
-                className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
-              >
-                Cozy Rain ☕
-              </button>
-            </div>
-          </div>
+
         </section>
 
         {/* Right Column: Phaser Game Canvas, JSON Config, WebSocket Logs */}
@@ -484,7 +459,7 @@ export default function Home() {
                 onClick={handleGenerateGame}
                 className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-semibold text-xs transition"
               >
-                Use Productive Preset & Generate
+                Generate Game Log
               </button>
             </div>
           )}
