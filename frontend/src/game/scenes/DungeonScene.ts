@@ -3,6 +3,7 @@ import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
 import Enemy from "../entities/Enemy";
+import { generateWeapon, randomWeaponCategory } from "../combat/Weapon";
 import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
 import { getMoodTint } from "@/lib/moodTint";
@@ -118,7 +119,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const startRoom = dungeon.rooms[0];
       const playerX = map.tileToWorldX(startRoom.centerX)!;
       const playerY = map.tileToWorldY(startRoom.centerY)!;
-      this.player = new Player(this, playerX, playerY);
+      const weapon = generateWeapon(randomWeaponCategory());
+      this.player = new Player(this, playerX, playerY, weapon);
       this.cameras.main.startFollow(this.player.sprite, true);
 
       this.physics.add.collider(this.player.sprite, this.groundLayer);
