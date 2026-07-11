@@ -9,6 +9,8 @@ import { MemoryEntry, loadMemories, saveMemory } from "@/lib/journal";
 import Book, { Spread } from "@/components/book/Book";
 import memorySpread from "@/components/book/MemorySpread";
 import todaySpread from "@/components/book/TodaySpread";
+import { isAuthenticated, getAuthHeaders } from "@/lib/auth";
+
 
 export default function Home() {
   const router = useRouter();
@@ -26,10 +28,14 @@ export default function Home() {
 
   // Open the book on today's blank page (the spread after the last memory)
   useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/login");
+      return;
+    }
     const stored = loadMemories();
     setMemories(stored);
     setSpreadIndex(stored.length);
-  }, []);
+  }, [router]);
 
   // Connect to API, fetch config, ink the page into the tome, then play it
   const handleGenerateGame = async () => {
@@ -39,7 +45,7 @@ export default function Home() {
     try {
       const response = await fetch("http://localhost:8000/api/generate-game", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ text: journalText }),
       });
 

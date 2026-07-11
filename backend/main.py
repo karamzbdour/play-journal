@@ -4,14 +4,16 @@ import random
 import re
 from typing import List
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from google import genai
 from google.genai import types
-
-
 load_dotenv()
+
+from auth import UserSignUp, UserSignIn, get_current_user
+from database import get_supabase_client
+
 
 app = FastAPI(
     title="Play-Journal API",
@@ -74,10 +76,75 @@ def read_root():
         }
     }
 
+@app.post("/api/auth/signup")
+def signup(user_data: UserSignUp):
+    """
+    Registers a new user in Supabase Auth.
+    """
+    supabase_client = get_supabase_client()
+    try:
+        options = {}
+        if user_data.full_name:
+            options["data"] = {"full_name": user_data.full_name}
+            
+        response = supabase_client.auth.sign_up({
+            "email": user_data.email,
+            "password": user_data.password,
+            "options": options
+        })
+        
+        user = response.user
+        session = response.session
+        
+        return {
+            "message": "User registered successfully.",
+            "user_id": user.id if user else None,
+            "session_active": session is not None
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Registration failed: {str(e)}"
+        )
+
+@app.post("/api/auth/login")
+def login(user_data: UserSignIn):
+    """
+    Authenticates a user with email and password in Supabase.
+    Returns access and refresh tokens.
+    """
+    supabase_client = get_supabase_client()
+    try:
+        response = supabase_client.auth.sign_in_with_password({
+            "email": user_data.email,
+            "password": user_data.password
+        })
+        
+        if not response.session:
+            raise HTTPException(
+                status_code=400,
+                detail="Authentication failed: No session returned."
+            )
+            
+        return {
+            "access_token": response.session.access_token,
+            "refresh_token": response.session.refresh_token,
+            "token_type": "bearer",
+            "user": {
+                "id": response.user.id,
+                "email": response.user.email,
+                "user_metadata": response.user.user_metadata
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Login failed: {str(e)}"
+        )
 
 
 @app.post("/api/generate-game", response_model=GameConfig)
-def generate_game(entry: JournalEntry):
+def generate_game(entry: JournalEntry, current_user: dict = Depends(get_current_user)):
     # Ensure the Gemini API key is configured
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
