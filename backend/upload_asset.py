@@ -36,9 +36,10 @@ def main():
 
     # Generate unique storage path
     file_ext = os.path.splitext(args.file)[1].lower()
-    if file_ext != ".webp":
-        print("Warning: It is recommended to upload WebP files as specified by the project schema.")
+    if file_ext not in [".webp", ".png"]:
+        print("Warning: Recommended formats are WebP or PNG.")
 
+    content_type = "image/png" if file_ext == ".png" else "image/webp"
     unique_filename = f"{uuid.uuid4()}{file_ext or '.webp'}"
     storage_path = f"{args.type}/{unique_filename}"
 
@@ -48,7 +49,7 @@ def main():
             supabase.storage.from_("sprites").upload(
                 path=storage_path,
                 file=f,
-                file_options={"content-type": "image/webp"}
+                file_options={"content-type": content_type}
             )
         print("✓ File uploaded to storage successfully.")
     except Exception as e:
