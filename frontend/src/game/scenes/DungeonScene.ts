@@ -20,6 +20,9 @@ import { prettifyName } from "@/lib/format";
 import { ClipDef, SpriteManifest } from "../animation/SpriteManifest";
 import { SpriteProvider, LocalSpriteProvider, GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
 import { pickManifest } from "../animation/resolveAnimation";
+import Door from "../dungeon/Door";
+import BossRoomEncounter from "../dungeon/BossRoomEncounter";
+import selectBossRoom from "../dungeon/selectBossRoom";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
@@ -63,21 +66,35 @@ function paintRooms(groundLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon)
   });
 }
 
+type DungeonRoom = Dungeon["rooms"][number];
+
+// One Door per connection point on the boss room's boundary. A door local to the top/bottom wall
+// (door.y is 0 or height-1) is sealed with the horizontal wall tile; one on the left/right wall
+// with the vertical tile - see TILE_MAPPING.DOOR.CLOSED.
+function buildBossRoomDoors(stuffLayer: Phaser.Tilemaps.TilemapLayer, room: DungeonRoom): Door[] {
+  return room.getDoorLocations().map((door) => {
+    const isHorizontalWall = door.y === 0 || door.y === room.height - 1;
+    const closedTileIndex = isHorizontalWall
+      ? TILE_MAPPING.DOOR.CLOSED.HORIZONTAL
+      : TILE_MAPPING.DOOR.CLOSED.VERTICAL;
+    return new Door(stuffLayer, room.x + door.x, room.y + door.y, closedTileIndex);
+  });
+}
+
 const MANIFEST_FETCH_TIMEOUT_MS = 5000;
 const LEVEL_COMPLETE_DELAY_MS = 1500;
 // How close the player needs to be to the stairs' tile origin to trigger completion -
 // generous enough that walking onto the tile from any side counts, without needing exact overlap.
 const STAIRS_REACH_RADIUS = TILE_SIZE * 0.75;
 
-// Places the stairs in the dungeon's last-generated room (distinct from the start room since
-// maxRooms is always >= 5, see getRoomCount) and clears collision on that tile so it's walkable.
-function placeStairs(map: Phaser.Tilemaps.Tilemap, stuffLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon) {
-  const finalRoom = dungeon.rooms[dungeon.rooms.length - 1];
-  stuffLayer.putTileAt(TILE_MAPPING.STAIRS, finalRoom.centerX, finalRoom.centerY);
+// Places the stairs at the center of the given room and clears collision on that tile so it's
+// walkable.
+function placeStairs(map: Phaser.Tilemaps.Tilemap, stuffLayer: Phaser.Tilemaps.TilemapLayer, room: DungeonRoom) {
+  stuffLayer.putTileAt(TILE_MAPPING.STAIRS, room.centerX, room.centerY);
   stuffLayer.setCollision(TILE_MAPPING.STAIRS, false);
   return {
-    x: map.tileToWorldX(finalRoom.centerX)!,
-    y: map.tileToWorldY(finalRoom.centerY)!,
+    x: map.tileToWorldX(room.centerX)!,
+    y: map.tileToWorldY(room.centerY)!,
   };
 }
 
@@ -122,8 +139,11 @@ export function createDungeonScene(
     private isPlayerDead = false;
     private isLevelComplete = false;
     private stairsPosition!: { x: number; y: number };
+    private map!: Phaser.Tilemaps.Tilemap;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
+    private boss?: Enemy;
+    private bossRoomEncounter?: BossRoomEncounter;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
     private vignette?: Phaser.GameObjects.Image;
     private rainSpawnZone?: { x: number; y: number; width: number; height: number; getRandomPoint(p: { x: number; y: number }): void };
@@ -199,6 +219,7 @@ export function createDungeonScene(
         height: dungeon.height,
       });
 
+      this.map = map;
       const tileset = map.addTilesetImage("tiles", undefined, TILE_SIZE, TILE_SIZE, 0, 0)!;
       this.groundLayer = map.createBlankLayer("Ground", tileset)!;
       // Second layer for items/decorations
@@ -210,8 +231,24 @@ export function createDungeonScene(
       // hard-coded and needs changing when more tilemaps are added
       this.groundLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
       this.stuffLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
+      // setCollisionByExclusion above only registers indexes already present in the (still blank)
+      // stuffLayer, so the closed-door tiles - not placed until a Door actually closes - need to
+      // be registered explicitly or they'd render but not collide.
+      this.stuffLayer.setCollision(
+        [TILE_MAPPING.DOOR.CLOSED.HORIZONTAL, TILE_MAPPING.DOOR.CLOSED.VERTICAL],
+        true
+      );
 
-      this.stairsPosition = placeStairs(map, this.stuffLayer, dungeon);
+      const startRoom = dungeon.rooms[0];
+      const finalRoom = dungeon.rooms[dungeon.rooms.length - 1];
+      this.stairsPosition = placeStairs(map, this.stuffLayer, finalRoom);
+
+      // The boss occupies a room strictly between the start and end rooms, so the player can
+      // neither spawn in it nor find the stairs sealed inside it - see selectBossRoom and
+      // BossRoomEncounter for the door logic. Dungeons that generate too few rooms for a valid
+      // middle room simply have no boss for that level.
+      const bossRoom = selectBossRoom(dungeon.rooms);
+      const bossRoomDoors = bossRoom ? buildBossRoomDoors(this.stuffLayer, bossRoom) : [];
 
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -219,7 +256,6 @@ export function createDungeonScene(
       const spriteProvider = new LocalSpriteProvider();
       const { player: playerManifest, enemy: enemyManifest } = await this.loadEntityManifests(spriteProvider);
 
-      const startRoom = dungeon.rooms[0];
       const playerX = map.tileToWorldX(startRoom.centerX)!;
       const playerY = map.tileToWorldY(startRoom.centerY)!;
       const weapon = generateWeapon(randomWeaponCategory());
@@ -229,15 +265,23 @@ export function createDungeonScene(
       this.physics.add.collider(this.player.sprite, this.groundLayer);
       this.physics.add.collider(this.player.sprite, this.stuffLayer);
 
-      // Static demo enemy: a second room if the dungeon generated one, otherwise a point offset
-      // from the player's spawn within the same room so the two don't overlap.
-      const enemyRoom = dungeon.rooms[1] ?? startRoom;
-      const enemyTileX = dungeon.rooms[1] ? enemyRoom.centerX : Math.min(enemyRoom.right - 1, enemyRoom.centerX + 2);
-      const enemyTileY = dungeon.rooms[1] ? enemyRoom.centerY : Math.min(enemyRoom.bottom - 1, enemyRoom.centerY + 2);
-      const enemyX = map.tileToWorldX(enemyTileX)!;
-      const enemyY = map.tileToWorldY(enemyTileY)!;
-      // Aggression 3 so the demo reaches all three example attacks (see combat/EnemyAttack.ts) over time.
-      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3, 50, enemyManifest);
+      if (bossRoom) {
+        const bossX = map.tileToWorldX(bossRoom.centerX)!;
+        const bossY = map.tileToWorldY(bossRoom.centerY)!;
+        // Aggression 3 so it reaches all three example attacks (see combat/EnemyAttack.ts) over
+        // time; HP well above a regular enemy's so the fight actually takes a while.
+        const boss = new Enemy(this, bossX, bossY, config.enemy_color, 3, 150, enemyManifest);
+        boss.sprite.setScale(1.4);
+        this.boss = boss;
+
+        const interior = {
+          left: bossRoom.left + 1,
+          right: bossRoom.right - 1,
+          top: bossRoom.top + 1,
+          bottom: bossRoom.bottom - 1,
+        };
+        this.bossRoomEncounter = new BossRoomEncounter(interior, bossRoomDoors, boss.health);
+      }
 
       this.playerLabel = new EntityLabel(this, fontFamily, this.player.sprite, {
         name: getDisplayName() ?? "You",
@@ -259,17 +303,20 @@ export function createDungeonScene(
           !!this.groundLayer.getTileAtWorldXY(x, y)?.collides || !!this.stuffLayer.getTileAtWorldXY(x, y)?.collides,
       };
 
-      const enemyLabel = new EntityLabel(this, fontFamily, enemy.sprite, {
-        name: prettifyName(config.enemy_type),
-        statusEffects: enemy.statusEffects,
-        health: enemy.health,
-      });
-      // Player and Enemy implement CombatEntity themselves (live x/y getters),
-      // so both combat systems take the entities directly.
-      const enemyCombat = new EnemyCombat(enemy, () => this.player, blocker, {
-        onAttack: (attackId) => enemy.animationController.play("attack", { abilityId: attackId }),
-      });
-      this.enemyInstances = [{ enemy, combat: enemyCombat, label: enemyLabel }];
+      if (this.boss) {
+        const boss = this.boss;
+        const bossLabel = new EntityLabel(this, fontFamily, boss.sprite, {
+          name: `Boss ${prettifyName(config.enemy_type)}`,
+          statusEffects: boss.statusEffects,
+          health: boss.health,
+        });
+        // Player and Enemy implement CombatEntity themselves (live x/y getters),
+        // so both combat systems take the entities directly.
+        const bossCombat = new EnemyCombat(boss, () => this.player, blocker, {
+          onAttack: (attackId) => boss.animationController.play("attack", { abilityId: attackId }),
+        });
+        this.enemyInstances = [{ enemy: boss, combat: bossCombat, label: bossLabel }];
+      }
 
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
@@ -335,6 +382,11 @@ export function createDungeonScene(
       this.playerLabel.update();
       this.enemyInstances.forEach(({ label }) => label.update());
 
+      this.bossRoomEncounter?.update(
+        this.map.worldToTileX(this.player.x)!,
+        this.map.worldToTileY(this.player.y)!
+      );
+
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
       }
@@ -344,7 +396,7 @@ export function createDungeonScene(
         return;
       }
 
-      if (this.hasReachedStairs()) {
+      if ((this.bossRoomEncounter?.isCleared ?? true) && this.hasReachedStairs()) {
         this.handleLevelComplete();
       }
     }

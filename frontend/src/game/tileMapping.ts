@@ -45,6 +45,12 @@ const TILE_MAPPING = {
       [6],
       [0],
     ],
+    // Tile placed over a door's single walkable tile to seal it shut (see game/dungeon/Door.ts).
+    // Reuses the ordinary wall tiles so a closed door reads as sealed stone.
+    CLOSED: {
+      HORIZONTAL: 39, // WALL.TOP - for doors in the top/bottom wall
+      VERTICAL: 21, // WALL.LEFT - for doors in the left/right wall
+    },
   },
   CHEST: 166,
   STAIRS: 81,
