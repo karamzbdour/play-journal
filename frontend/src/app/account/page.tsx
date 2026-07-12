@@ -81,19 +81,10 @@ export default function AccountPage() {
 
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a7550" }}>
-              Ident Key (Email)
+              Email
             </span>
             <span className="text-sm font-semibold" style={{ color: "#a18262", fontFamily: "var(--font-mono)" }}>
               {user.email}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8a7550" }}>
-              User ID Reference
-            </span>
-            <span className="text-[10px] select-all font-mono" style={{ color: "#57503f" }}>
-              {user.id}
             </span>
           </div>
         </div>
