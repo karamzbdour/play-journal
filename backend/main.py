@@ -13,6 +13,7 @@ load_dotenv()
 
 from auth import UserSignUp, UserSignIn, get_current_user
 from database import get_supabase_client
+from supabase_auth.types import SignUpWithEmailAndPasswordCredentials, SignInWithEmailAndPasswordCredentials
 
 
 app = FastAPI(
@@ -91,12 +92,13 @@ def signup(user_data: UserSignUp):
         options = {}
         if user_data.full_name:
             options["data"] = {"full_name": user_data.full_name}
-            
-        response = supabase_client.auth.sign_up({
-            "email": user_data.email,
-            "password": user_data.password,
-            "options": options
-        })
+
+        credentials = SignUpWithEmailAndPasswordCredentials(
+            email=user_data.email,
+            password=user_data.password,
+            options=options
+        )
+        response = supabase_client.auth.sign_up(credentials)
         
         user = response.user
         session = response.session
@@ -120,10 +122,11 @@ def login(user_data: UserSignIn):
     """
     supabase_client = get_supabase_client()
     try:
-        response = supabase_client.auth.sign_in_with_password({
-            "email": user_data.email,
-            "password": user_data.password
-        })
+        credentials = SignInWithEmailAndPasswordCredentials(
+            email=user_data.email,
+            password=user_data.password
+        )
+        response = supabase_client.auth.sign_in_with_password(credentials)
         
         if not response.session:
             raise HTTPException(
