@@ -188,7 +188,7 @@ def generate_game(entry: JournalEntry, current_user: dict = Depends(get_current_
     try:
         supabase_client = get_supabase_client()
         assets_res = supabase_client.table("game_assets").select("name, description, storage_path, type, tags").execute()
-        db_assets = assets_res.data or []
+        db_assets = cast(List[dict], assets_res.data or [])
     except Exception as e:
         # Fallback to empty if DB query fails
         db_assets = []
