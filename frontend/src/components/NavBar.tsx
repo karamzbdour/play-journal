@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAuthToken, isAuthenticated } from "@/lib/auth";
 
+import { motion } from "framer-motion";
+
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -22,10 +24,15 @@ export default function NavBar() {
     router.push("/login");
   };
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push("/");
+    window.dispatchEvent(new CustomEvent("close-book"));
+  };
+
 
   const navItems = [
     { name: "Home", path: "/" },
-    { name: "Chronicles", path: "/journal" },
     { name: "Account", path: "/account" },
   ];
 
@@ -38,6 +45,22 @@ export default function NavBar() {
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
       }}
     >
+      {/* Logo in top-left corner */}
+      <div className="flex items-center w-16 h-10 relative">
+        <a href="/" onClick={handleLogoClick} className="absolute -top-3 left-0 z-50">
+          <motion.img
+            src="/logo.webp"
+            alt="Play Journal Logo"
+            className="h-16 w-16 cursor-pointer object-contain"
+            whileHover={{ 
+              scale: 1.15, 
+              rotate: 5, 
+              filter: "drop-shadow(0 0 12px rgba(251, 191, 36, 0.7))" 
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          />
+        </a>
+      </div>
       {/* Nav Links, pinned to the true center of the bar */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
         {navItems.map((item) => {

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { GameConfig } from "@/types/game";
 import { mockGameConfig } from "@/lib/mockGameConfig";
 import { saveGameConfig } from "@/lib/gameSession";
@@ -18,6 +19,7 @@ export default function Home() {
   // The tome's filled pages; null until localStorage has been read (client only)
   const [memories, setMemories] = useState<MemoryEntry[] | null>(null);
   const [spreadIndex, setSpreadIndex] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Input and API states
   const [journalText, setJournalText] = useState(
@@ -45,6 +47,14 @@ export default function Home() {
     setMemories(stored);
     setSpreadIndex(stored.length);
   }, [router]);
+
+  useEffect(() => {
+    const handleClose = () => {
+      setIsOpen(false);
+    };
+    window.addEventListener("close-book", handleClose);
+    return () => window.removeEventListener("close-book", handleClose);
+  }, []);
 
   // Connect to API, fetch config, ink the page into the tome, then play it
   const handleGenerateGame = async () => {
@@ -109,11 +119,18 @@ export default function Home() {
 
   return (
     <>
+
     <div className="tome-scene flex flex-col items-center justify-center px-3 pt-20">
       <div className="tome-embers" aria-hidden />
 
       {memories !== null && (
-        <Book spreads={spreads} index={spreadIndex} onIndexChange={setSpreadIndex} />
+        <Book 
+          spreads={spreads} 
+          index={spreadIndex} 
+          onIndexChange={setSpreadIndex} 
+          isOpen={isOpen}
+          onOpenChange={setIsOpen}
+        />
       )}
     </div>
 
