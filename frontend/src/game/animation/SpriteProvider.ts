@@ -17,9 +17,11 @@ function clip(spriteId: string, state: AnimationState, opts: { frameCount: numbe
   };
 }
 
-// Fully populated (all six AnimationStates) - the only manifests required to be complete, and
-// the guaranteed-safe fallback target for any sprite id resolveAnimation.ts can't otherwise
-// resolve. Frame counts here must match frontend/scripts/generate-placeholder-sprites.mjs.
+// Fully populated (all six AnimationStates) - the only manifests required to be complete.
+// GENERIC_ENEMY_MANIFEST is the guaranteed-safe fallback for any enemy sprite id
+// resolveAnimation.ts can't otherwise resolve; the player-side equivalent is
+// SLICED_KNIGHT_MANIFEST below (real art beats a placeholder box). Frame counts here must match
+// frontend/scripts/generate-placeholder-sprites.mjs.
 function buildGenericManifest(spriteId: string): SpriteManifest {
   return {
     spriteId,
@@ -37,12 +39,15 @@ function buildGenericManifest(spriteId: string): SpriteManifest {
 export const GENERIC_HUMANOID_MANIFEST: SpriteManifest = buildGenericManifest("generic_humanoid");
 export const GENERIC_ENEMY_MANIFEST: SpriteManifest = buildGenericManifest("generic_enemy");
 
-// Test sprite cut from sliced_rogues character sheets (see public/sprites/sliced_knight/,
+// Sprite cut from sliced_rogues character sheets (see public/sprites/sliced_knight/,
 // sliced_knight2/, and scripts/build-sliced-knight-sprite.mjs). idle/walk/death are real frames
 // from the sheets; attack/hit intentionally have no clips here and fall back to walk/idle via
 // resolveAnimation.ts's resolveClip rather than guessing which sheet rows mean what. Walking left
 // is just the walk clip mirrored (AnimationController flips the sprite via flipX), not separate art.
-const SLICED_KNIGHT_MANIFEST: SpriteManifest = {
+// Doubles as pickManifest's player-side fallback (see resolveAnimation.ts) when a sprite id can't
+// be fetched or resolved - idle/walk/death is enough for hasFallbackBase to accept it, and it's
+// real art rather than a placeholder box.
+export const SLICED_KNIGHT_MANIFEST: SpriteManifest = {
   spriteId: "sliced_knight",
   clips: {
     idle: clip("sliced_knight", "idle", { frameCount: 2, frameRate: 4, repeat: -1 }),

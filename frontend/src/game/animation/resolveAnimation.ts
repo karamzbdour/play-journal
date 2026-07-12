@@ -1,19 +1,21 @@
 import { AnimationState, ClipDef, ManifestKey, SpriteManifest } from "./SpriteManifest";
-import { GENERIC_ENEMY_MANIFEST, GENERIC_HUMANOID_MANIFEST } from "./SpriteProvider";
+import { GENERIC_ENEMY_MANIFEST, SLICED_KNIGHT_MANIFEST } from "./SpriteProvider";
 
 export type SpriteKind = "player" | "enemy";
 
 // A manifest is safe to resolve against only if it has at least one of the two states
-// resolveClip's fallback chain bottoms out on. Generic manifests always qualify; this also
-// catches a fetched manifest missing both (falls back to generic rather than resolveClip throwing).
+// resolveClip's fallback chain bottoms out on. The fallback manifests below always qualify; this
+// also catches a fetched manifest missing both (falls back rather than resolveClip throwing).
 function hasFallbackBase(manifest: SpriteManifest): boolean {
   return manifest.clips.idle !== undefined || manifest.clips.walk !== undefined;
 }
 
+// Player fallback is the sliced knight (real art) rather than the generic placeholder humanoid;
+// enemies still fall back to the generic placeholder since there's no equivalent real enemy art.
 export function pickManifest(spriteKind: SpriteKind, fetched: SpriteManifest | null): SpriteManifest {
-  const generic = spriteKind === "player" ? GENERIC_HUMANOID_MANIFEST : GENERIC_ENEMY_MANIFEST;
+  const fallback = spriteKind === "player" ? SLICED_KNIGHT_MANIFEST : GENERIC_ENEMY_MANIFEST;
   if (fetched && hasFallbackBase(fetched)) return fetched;
-  return generic;
+  return fallback;
 }
 
 // Missing-state fallback chain: exact match -> (for attack:${abilityId}) generic "attack" ->

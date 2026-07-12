@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { pickManifest, resolveClip, shouldInterrupt } from "@/game/animation/resolveAnimation";
-import { GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST } from "@/game/animation/SpriteProvider";
+import { GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST, SLICED_KNIGHT_MANIFEST } from "@/game/animation/SpriteProvider";
 import { SpriteManifest } from "@/game/animation/SpriteManifest";
 
 describe("pickManifest", () => {
@@ -14,17 +14,17 @@ describe("pickManifest", () => {
     expect(pickManifest("player", fetched)).toBe(fetched);
   });
 
-  it("falls back to the generic humanoid manifest when fetch returned null", () => {
-    expect(pickManifest("player", null)).toBe(GENERIC_HUMANOID_MANIFEST);
+  it("falls back to the sliced knight manifest when fetch returned null", () => {
+    expect(pickManifest("player", null)).toBe(SLICED_KNIGHT_MANIFEST);
   });
 
   it("falls back to the generic enemy manifest when fetch returned null", () => {
     expect(pickManifest("enemy", null)).toBe(GENERIC_ENEMY_MANIFEST);
   });
 
-  it("falls back to generic when the fetched manifest has neither idle nor walk", () => {
+  it("falls back to the sliced knight when the fetched manifest has neither idle nor walk", () => {
     const fetched: SpriteManifest = { spriteId: "custom", clips: { attack: GENERIC_HUMANOID_MANIFEST.clips.attack! } };
-    expect(pickManifest("player", fetched)).toBe(GENERIC_HUMANOID_MANIFEST);
+    expect(pickManifest("player", fetched)).toBe(SLICED_KNIGHT_MANIFEST);
   });
 });
 

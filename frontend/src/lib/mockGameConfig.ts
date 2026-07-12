@@ -11,7 +11,7 @@ export const mockGameConfig: GameConfig = {
   enemy_color: "#ef4444",
   spawn_rate: 1200,
   win_score: 12,
-  mood: "productive",
+  mood: "reflective",
   game_rules: [
     "Use ARROW keys or WASD to move.",
     "Catch coffee cups to score points and avoid the red bugs.",

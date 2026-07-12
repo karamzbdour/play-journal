@@ -15,7 +15,7 @@ import { getDisplayName } from "@/lib/auth";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
 import { ClipDef, SpriteManifest } from "../animation/SpriteManifest";
-import { SpriteProvider, LocalSpriteProvider, GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
+import { SpriteProvider, LocalSpriteProvider, SLICED_KNIGHT_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
 import { pickManifest } from "../animation/resolveAnimation";
 import { DungeonRoom } from "../dungeon/DungeonRoom";
 import RoomEncounter from "../dungeon/RoomEncounter";
@@ -139,10 +139,11 @@ export function createDungeonScene(
       this.load.image("tiles", "/tilesets/buch-tileset-48px.png");
     }
 
-    // Resolves the player/enemy sprite manifests (falling back to the generic manifests on fetch
-    // failure, unknown id, or a texture actually failing to download) and loads every clip's
-    // texture before returning, so by the time this resolves everything needed to build
-    // Player/Enemy's AnimationControllers is already in the texture manager.
+    // Resolves the player/enemy sprite manifests (falling back to the sliced knight for the
+    // player and the generic manifest for the enemy on fetch failure, unknown id, or a texture
+    // actually failing to download) and loads every clip's texture before returning, so by the
+    // time this resolves everything needed to build Player/Enemy's AnimationControllers is
+    // already in the texture manager.
     private async loadEntityManifests(spriteProvider: SpriteProvider): Promise<{ player: SpriteManifest; enemy: SpriteManifest }> {
       const [playerFetched, enemyFetched] = await Promise.all([
         fetchManifestWithTimeout(spriteProvider, config.player_sprite),
@@ -156,9 +157,9 @@ export function createDungeonScene(
       this.load.on(PhaserLib.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => failedKeys.add(file.key));
 
       const queued = new Set<string>();
-      // Always queue the generic manifests too, so there's a guaranteed-loaded fallback even if
+      // Always queue the fallback manifests too, so there's a guaranteed-loaded fallback even if
       // a fetched manifest's own texture URLs 404 after the fetch itself succeeded.
-      queueManifestTextures(this, GENERIC_HUMANOID_MANIFEST, queued);
+      queueManifestTextures(this, SLICED_KNIGHT_MANIFEST, queued);
       queueManifestTextures(this, GENERIC_ENEMY_MANIFEST, queued);
       queueManifestTextures(this, playerManifest, queued);
       queueManifestTextures(this, enemyManifest, queued);
@@ -168,7 +169,7 @@ export function createDungeonScene(
         this.load.start();
       });
 
-      if (manifestHasFailedTexture(playerManifest, failedKeys)) playerManifest = GENERIC_HUMANOID_MANIFEST;
+      if (manifestHasFailedTexture(playerManifest, failedKeys)) playerManifest = SLICED_KNIGHT_MANIFEST;
       if (manifestHasFailedTexture(enemyManifest, failedKeys)) enemyManifest = GENERIC_ENEMY_MANIFEST;
 
       return { player: playerManifest, enemy: enemyManifest };
