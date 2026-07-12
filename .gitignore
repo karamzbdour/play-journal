@@ -78,3 +78,7 @@ pyrightconfig.json
 
 # Local git worktrees used for isolated feature execution
 .worktrees/
+
+# MCP server config (may contain secrets)
+.mcp.json
+.mcp.json/

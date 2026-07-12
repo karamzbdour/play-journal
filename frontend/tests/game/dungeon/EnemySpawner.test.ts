@@ -32,6 +32,7 @@ function baseCtx(): Omit<RoomSpawnContext, "room"> {
     map: {} as unknown as Phaser.Tilemaps.Tilemap,
     config: {} as unknown as RoomSpawnContext["config"],
     enemyManifest: {} as unknown as RoomSpawnContext["enemyManifest"],
+    bossManifest: {} as unknown as RoomSpawnContext["bossManifest"],
     fontFamily: "monospace",
     getPlayer: () => ({ x: 0, y: 0 }) as unknown as ReturnType<RoomSpawnContext["getPlayer"]>,
     blocker: { isBlocked: () => false },

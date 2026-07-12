@@ -33,6 +33,7 @@ export interface RoomSpawnContext {
   room: DungeonRoom;
   config: GameConfig;
   enemyManifest: SpriteManifest;
+  bossManifest: SpriteManifest;
   fontFamily: string;
   getPlayer: () => CombatEntity;
   blocker: LineOfSightBlocker;
