@@ -37,3 +37,52 @@ describe("Health", () => {
     expect(health.getRatio()).toBe(0);
   });
 });
+
+describe("Health regen", () => {
+  it("does not regen without a regen config", () => {
+    const health = new Health(100);
+    health.takeDamage(50);
+    health.update(10000);
+    expect(health.getRatio()).toBe(0.5);
+  });
+
+  it("does not regen before the delay has elapsed", () => {
+    const health = new Health(100, { delayMs: 5000, perSecond: 10 });
+    health.takeDamage(50);
+    health.update(4999);
+    expect(health.getRatio()).toBe(0.5);
+  });
+
+  it("regens at the configured rate once the delay has elapsed", () => {
+    const health = new Health(100, { delayMs: 5000, perSecond: 10 });
+    health.takeDamage(50);
+    health.update(5000);
+    health.update(1000);
+    expect(health.getRatio()).toBe(0.6);
+  });
+
+  it("resets the delay timer whenever damage is taken", () => {
+    const health = new Health(100, { delayMs: 5000, perSecond: 10 });
+    health.takeDamage(50);
+    health.update(4999);
+    health.takeDamage(10);
+    health.update(4999);
+    expect(health.getRatio()).toBe(0.4);
+  });
+
+  it("does not regen past max", () => {
+    const health = new Health(100, { delayMs: 5000, perSecond: 10 });
+    health.takeDamage(5);
+    health.update(5000);
+    health.update(10000);
+    expect(health.getRatio()).toBe(1);
+  });
+
+  it("does not revive a dead entity", () => {
+    const health = new Health(100, { delayMs: 5000, perSecond: 10 });
+    health.takeDamage(100);
+    health.update(20000);
+    expect(health.isDead).toBe(true);
+    expect(health.getRatio()).toBe(0);
+  });
+});

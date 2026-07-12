@@ -12,11 +12,13 @@ import AnimationController from "../animation/AnimationController";
 // 4-directional cursor input, velocity normalized so diagonal movement isn't faster.
 const PLAYER_SPEED = 350;
 const PLAYER_MAX_HP = 100;
+const PLAYER_REGEN_DELAY_MS = 5000;
+const PLAYER_REGEN_PER_SECOND = 5;
 
 export default class Player implements CombatEntity {
   public sprite: Phaser.GameObjects.Sprite;
   public statusEffects: StatusEffectController = new StatusEffectController();
-  public health: Health = new Health(PLAYER_MAX_HP);
+  public health: Health = new Health(PLAYER_MAX_HP, { delayMs: PLAYER_REGEN_DELAY_MS, perSecond: PLAYER_REGEN_PER_SECOND });
   public weapon: Weapon;
   public animationController: AnimationController;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -46,6 +48,7 @@ export default class Player implements CombatEntity {
 
   update(deltaMs: number) {
     this.statusEffects.update(deltaMs);
+    this.health.update(deltaMs);
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
