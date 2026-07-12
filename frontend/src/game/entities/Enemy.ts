@@ -7,9 +7,9 @@ import { SpriteManifest } from "../animation/SpriteManifest";
 import { resolveClip } from "../animation/resolveAnimation";
 import AnimationController from "../animation/AnimationController";
 
-// Static placeholder enemy - no movement/AI, matching Player's lack of real pathing. Exists
-// mainly to prove the nameplate and combat systems work on a non-player entity; real enemy
-// movement/AI is a separate feature.
+// A physics-backed enemy. Movement decisions live in EnemyAI (which sets this sprite's body
+// velocity); this class owns the body itself and derives animation state from whatever velocity
+// the AI last set, mirroring how Player derives its animation from input-driven velocity.
 export default class Enemy implements AggressiveCombatEntity {
   public sprite: Phaser.GameObjects.Sprite;
   public statusEffects: StatusEffectController = new StatusEffectController();
@@ -43,11 +43,23 @@ export default class Enemy implements AggressiveCombatEntity {
     this.aggressionLevel = aggressionLevel;
     this.health = new Health(maxHp);
     this.animationController = new AnimationController(scene, this.sprite, manifest);
+    scene.physics.add.existing(this.sprite);
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
   }
 
   update(deltaMs: number) {
     this.statusEffects.update(deltaMs);
-    // No movement yet, so isMoving is always false - see the class comment above.
-    this.animationController.update(this.health.getRatio(), this.health.isDead, false);
+
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    if (this.health.isDead) body.setVelocity(0);
+
+    const isMoving = body.velocity.x !== 0 || body.velocity.y !== 0;
+    this.animationController.update(this.health.getRatio(), this.health.isDead, isMoving, body.velocity.x < 0);
+  }
+
+  // Called when the scene stops driving update() (death, level complete) - without this the
+  // physics body keeps drifting at its last velocity since nothing calls setVelocity(0) anymore.
+  stop() {
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0);
   }
 }

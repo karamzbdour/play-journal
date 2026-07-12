@@ -5,6 +5,7 @@ import { RoomKind } from "@/game/dungeon/RoomKind";
 import { DungeonRoom } from "@/game/dungeon/DungeonRoom";
 import Health from "@/game/combat/Health";
 import type Enemy from "@/game/entities/Enemy";
+import type EnemyAI from "@/game/entities/EnemyAI";
 import type EnemyCombat from "@/game/combat/EnemyCombat";
 import type EntityLabel from "@/game/ui/EntityLabel";
 
@@ -26,7 +27,7 @@ function fakeStuffLayer(): Phaser.Tilemaps.TilemapLayer {
   return { putTileAt: vi.fn(), removeTileAt: vi.fn() } as unknown as Phaser.Tilemaps.TilemapLayer;
 }
 
-function baseCtx(): Omit<RoomSpawnContext, "room"> {
+function baseCtx(): Omit<RoomSpawnContext, "room" | "stuffLayer"> {
   return {
     scene: {} as unknown as Phaser.Scene,
     map: {} as unknown as Phaser.Tilemaps.Tilemap,
@@ -43,6 +44,7 @@ function fakeSpawnedEnemy(): SpawnedEnemy {
   const health = new Health(10);
   return {
     enemy: { health } as unknown as Enemy,
+    ai: {} as unknown as EnemyAI,
     combat: {} as unknown as EnemyCombat,
     label: {} as unknown as EntityLabel,
   };
@@ -79,9 +81,10 @@ describe("EnemySpawner", () => {
     const room = fakeRoom();
     const assignments = new Map<DungeonRoom, RoomKind>([[room, "boss"]]);
     const ctx = baseCtx();
-    const results = spawner.spawnAll([room], assignments, fakeStuffLayer(), ctx);
+    const stuffLayer = fakeStuffLayer();
+    const results = spawner.spawnAll([room], assignments, stuffLayer, ctx);
 
-    expect(strategy).toHaveBeenCalledWith({ ...ctx, room });
+    expect(strategy).toHaveBeenCalledWith({ ...ctx, room, stuffLayer });
     expect(results).toHaveLength(1);
     expect(results[0].kind).toBe("boss");
     expect(results[0].spawned).toBe(spawned);

@@ -6,6 +6,7 @@ import { LineOfSightBlocker } from "../combat/lineOfSight";
 import EnemyCombat from "../combat/EnemyCombat";
 import EntityLabel from "../ui/EntityLabel";
 import Enemy from "../entities/Enemy";
+import EnemyAI from "../entities/EnemyAI";
 import { DungeonRoom } from "./DungeonRoom";
 import { RoomKind } from "./RoomKind";
 import RoomEncounter, { TileBounds } from "./RoomEncounter";
@@ -13,6 +14,7 @@ import buildRoomDoors from "./buildRoomDoors";
 
 export interface SpawnedEnemy {
   enemy: Enemy;
+  ai: EnemyAI;
   combat: EnemyCombat;
   label: EntityLabel;
 }
@@ -31,6 +33,8 @@ export interface RoomSpawnContext {
   scene: Phaser.Scene;
   map: Phaser.Tilemaps.Tilemap;
   room: DungeonRoom;
+  // For checking which tiles are already occupied (structures, stairs) when picking spawn spots.
+  stuffLayer: Phaser.Tilemaps.TilemapLayer;
   config: GameConfig;
   enemyManifest: SpriteManifest;
   bossManifest: SpriteManifest;
@@ -56,7 +60,7 @@ export default class EnemySpawner {
     rooms: readonly DungeonRoom[],
     assignments: ReadonlyMap<DungeonRoom, RoomKind>,
     stuffLayer: Phaser.Tilemaps.TilemapLayer,
-    ctx: Omit<RoomSpawnContext, "room">
+    ctx: Omit<RoomSpawnContext, "room" | "stuffLayer">
   ): RoomSpawnResult[] {
     const results: RoomSpawnResult[] = [];
 
@@ -67,7 +71,7 @@ export default class EnemySpawner {
       const strategy = this.strategies.get(kind);
       if (!strategy) continue;
 
-      const spawned = strategy({ ...ctx, room });
+      const spawned = strategy({ ...ctx, room, stuffLayer });
 
       const doors = buildRoomDoors(stuffLayer, room);
       const interior: TileBounds = {

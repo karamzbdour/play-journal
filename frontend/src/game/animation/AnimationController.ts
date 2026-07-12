@@ -64,9 +64,9 @@ export default class AnimationController {
     }
   }
 
-  // movingLeft only matters while isMoving; defaults false so non-directional callers (Enemy,
-  // which never moves) don't need to pass it. Set every frame (not gated by shouldInterrupt like
-  // play() is) so a direction reversal mid-walk flips immediately instead of waiting for a state change.
+  // movingLeft only matters while isMoving; defaults false so non-directional callers don't need
+  // to pass it. Set every frame (not gated by shouldInterrupt like play() is) so a direction
+  // reversal mid-walk flips immediately instead of waiting for a state change.
   update(healthRatio: number, isDead: boolean, isMoving: boolean, movingLeft = false): void {
     this.lastIsMoving = isMoving;
     this.sprite.setFlipX(isMoving && movingLeft);
