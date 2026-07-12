@@ -134,14 +134,6 @@ export function createDungeonScene(
 
     preload() {
       this.load.image("tiles", "/tilesets/buch-tileset-48px.png");
-      if (config.asset_urls && Array.isArray(config.asset_urls)) {
-        config.asset_urls.forEach((asset) => {
-          this.load.spritesheet(asset.type, asset.url, {
-            frameWidth: 32,
-            frameHeight: 32,
-          });
-        });
-      }
     }
 
     // Resolves the player/enemy sprite manifests (falling back to the generic manifests on fetch
@@ -216,7 +208,7 @@ export function createDungeonScene(
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
-      const spriteProvider = new LocalSpriteProvider();
+      const spriteProvider = new LocalSpriteProvider(config.asset_urls);
       const { player: playerManifest, enemy: enemyManifest } = await this.loadEntityManifests(spriteProvider);
 
       const startRoom = dungeon.rooms[0];

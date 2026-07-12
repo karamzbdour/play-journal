@@ -1,4 +1,5 @@
 import { AnimationState, ClipDef, SpriteManifest } from "./SpriteManifest";
+import { AssetSelection } from "@/types/game";
 
 export interface SpriteProvider {
   getManifest(spriteId: string): Promise<SpriteManifest | null>;
@@ -68,7 +69,50 @@ export class LocalSpriteProvider implements SpriteProvider {
     },
   };
 
+  constructor(private assetUrls?: AssetSelection[]) {}
+
   async getManifest(spriteId: string): Promise<SpriteManifest | null> {
+    if (this.assetUrls && Array.isArray(this.assetUrls)) {
+      const isPlayer = spriteId === "sliced_knight" || spriteId === "generic_humanoid";
+      const customAsset = isPlayer 
+        ? (this.assetUrls.find((a) => a.type === "weapon") || this.assetUrls.find((a) => a.type === "player"))
+        : (this.assetUrls.find((a) => a.type === "enemy") || this.assetUrls.find((a) => a.type === "boss"));
+
+      if (customAsset) {
+        return {
+          spriteId,
+          clips: {
+            idle: {
+              textureKey: `${spriteId}_idle`,
+              textureUrl: customAsset.url,
+              frameWidth: 32,
+              frameHeight: 32,
+              frameCount: 2,
+              frameRate: 4,
+              repeat: -1,
+            },
+            walk: {
+              textureKey: `${spriteId}_walk`,
+              textureUrl: customAsset.url,
+              frameWidth: 32,
+              frameHeight: 32,
+              frameCount: 4,
+              frameRate: 8,
+              repeat: -1,
+            },
+            death: {
+              textureKey: `${spriteId}_death`,
+              textureUrl: customAsset.url,
+              frameWidth: 32,
+              frameHeight: 32,
+              frameCount: 4,
+              frameRate: 6,
+              repeat: 0,
+            },
+          },
+        };
+      }
+    }
     return this.manifests[spriteId] ?? null;
   }
 }
