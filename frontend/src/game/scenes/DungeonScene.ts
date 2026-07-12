@@ -362,6 +362,7 @@ export function createDungeonScene(
 
     private handlePlayerDeath() {
       this.isPlayerDead = true;
+      this.player.stop();
       this.add
         .text(this.scale.width / 2, this.scale.height / 2, "YOU DIED", {
           fontFamily,
@@ -376,6 +377,7 @@ export function createDungeonScene(
 
     private handleLevelComplete() {
       this.isLevelComplete = true;
+      this.player.stop();
       this.add
         .text(this.scale.width / 2, this.scale.height / 2, "LEVEL COMPLETE", {
           fontFamily,

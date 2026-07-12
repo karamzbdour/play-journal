@@ -65,4 +65,10 @@ export default class Player implements CombatEntity {
     const movingLeft = body.velocity.x < 0;
     this.animationController.update(this.health.getRatio(), this.health.isDead, isMoving, movingLeft);
   }
+
+  // Called when the scene stops driving update() (death, level complete) - without this the
+  // physics body keeps drifting at its last velocity since nothing calls setVelocity(0) anymore.
+  stop() {
+    (this.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+  }
 }
