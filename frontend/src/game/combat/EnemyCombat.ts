@@ -1,20 +1,8 @@
 import { ATTACKS, AttackDefinition } from "./Attack";
-import StatusEffectController from "./StatusEffectController";
-import Health from "./Health";
+import { CombatEntity, AggressiveCombatEntity } from "./CombatEntity";
 import { resolveAttackComponents } from "./AttackComponent";
 import { LineOfSightBlocker, isWithinRange, hasLineOfSight } from "./lineOfSight";
 import { TILE_SIZE } from "../constants";
-
-export interface CombatEntity {
-  x: number;
-  y: number;
-  statusEffects: StatusEffectController;
-  health: Health;
-}
-
-export interface AggressiveCombatEntity extends CombatEntity {
-  aggressionLevel: number;
-}
 
 export type AttackSelector = (
   enemy: AggressiveCombatEntity,

@@ -1,5 +1,5 @@
 import type Phaser from "phaser";
-import { CombatEntity } from "./EnemyCombat";
+import { CombatEntity } from "./CombatEntity";
 import { LineOfSightBlocker, hasLineOfSight } from "./lineOfSight";
 import { Weapon } from "./Weapon";
 import { WEAPON_ATTACKS, BASIC_ATTACK } from "./WeaponAttack";

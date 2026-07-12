@@ -1,11 +1,9 @@
-import { AttackComponent } from "./AttackComponent";
+import { WeaponAttackDefinition } from "./WeaponAttack";
 
-export interface AttackDefinition {
-  id: string;
-  name: string;
+// An enemy attack is a weapon attack plus AI gating: how aggressive the enemy
+// must be to use it, and whether range/line-of-sight constrain it.
+export interface AttackDefinition extends WeaponAttackDefinition {
   minAggression: number;
-  cooldownMs: number;
-  effects: AttackComponent[];
   requiresLineOfSight?: boolean;
   maxRangeTiles?: number;
 }
