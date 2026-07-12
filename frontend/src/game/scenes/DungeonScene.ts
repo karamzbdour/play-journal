@@ -352,7 +352,7 @@ export function createDungeonScene(
       }
     }
 
-    update(time: number, delta: number) {
+    update(_time: number, delta: number) {
       // create() resolves sprite manifests asynchronously; guard against Phaser calling update()
       // on an earlier frame before it has finished.
       if (!this.player) return;

@@ -40,8 +40,8 @@ export const GENERIC_HUMANOID_MANIFEST: SpriteManifest = buildGenericManifest("g
 export const GENERIC_ENEMY_MANIFEST: SpriteManifest = buildGenericManifest("generic_enemy");
 
 // Sprite cut from sliced_rogues character sheets (see public/sprites/sliced_knight/,
-// sliced_knight2/, and scripts/build-sliced-knight-sprite.mjs). idle/walk/death are real frames
-// from the sheets; attack/hit intentionally have no clips here and fall back to walk/idle via
+// sliced_knight2/, and scripts/build-sliced-knight-sprite.mjs). idle/walk/attack/death are real
+// frames from the sheets; hit intentionally has no clip here and falls back to walk/idle via
 // resolveAnimation.ts's resolveClip rather than guessing which sheet rows mean what. Walking left
 // is just the walk clip mirrored (AnimationController flips the sprite via flipX), not separate art.
 // Doubles as pickManifest's player-side fallback (see resolveAnimation.ts) when a sprite id can't
@@ -52,6 +52,7 @@ export const SLICED_KNIGHT_MANIFEST: SpriteManifest = {
   clips: {
     idle: clip("sliced_knight", "idle", { frameCount: 1, frameRate: 4, repeat: -1 }),
     walk: clip("sliced_knight", "walk", { frameCount: 4, frameRate: 8, repeat: -1 }),
+    attack: clip("sliced_knight", "attack", { frameCount: 3, frameRate: 12, repeat: 0 }),
     death: clip("sliced_knight", "death", { frameCount: 4, frameRate: 6, repeat: 0 }),
   },
 };

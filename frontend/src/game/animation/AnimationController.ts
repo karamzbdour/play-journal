@@ -28,25 +28,38 @@ export default class AnimationController {
 
   play(state: AnimationState, options?: { abilityId?: string }): void {
     if (!shouldInterrupt(this.currentState, state)) return;
+    this.playInternal(state, options);
+  }
 
+  // Shared by play() (gated by shouldInterrupt) and the animationcomplete handler below (which
+  // must bypass that gate - it's not an external interrupt request, it's a one-shot clip like
+  // "attack" handing control back once it's done. Since shouldInterrupt only lets a *higher*
+  // priority state override the current one, and the clip that just finished IS the current
+  // state, gating this call the same way as play() would always block it (attack/hit can never
+  // out-rank themselves) and strand the controller on the last frame forever.
+  private playInternal(state: AnimationState, options?: { abilityId?: string }): void {
     const requestedKey: ManifestKey = options?.abilityId ? `attack:${options.abilityId}` : state;
     const clip = resolveClip(this.manifest, requestedKey);
 
     // hit/attack are always authored with repeat: 0 (one-shot). If resolveClip had to fall back
     // to a looping walk/idle clip because this manifest has no dedicated art for `state` (e.g.
-    // sliced_knight has no hit/attack clips), there's nothing to actually show for it - leave the
-    // sprite playing whatever it already was rather than switching to a clip with no way back
-    // (its animationcomplete never fires, since it loops forever), which would otherwise strand
-    // the controller in `state` and block walk/idle from ever taking back over.
+    // sliced_knight has no hit clip), there's nothing to actually show for it - leave the sprite
+    // playing whatever it already was rather than switching to a clip with no way back (its
+    // animationcomplete never fires, since it loops forever), which would otherwise strand the
+    // controller in `state` and block walk/idle from ever taking back over.
     if ((state === "hit" || state === "attack") && clip.repeat !== 0) return;
 
     this.currentState = state;
+    // Clears any listener left behind by a clip that got interrupted before it could naturally
+    // complete (animationcomplete never fires for an interrupted clip, so `once` never
+    // self-removed it) - otherwise it fires alongside this clip's own listener later.
+    this.sprite.off("animationcomplete");
     this.sprite.play(clip.textureKey);
 
     if (clip.repeat === 0) {
       this.sprite.once("animationcomplete", () => {
         if (this.currentState === "death") return; // death latches even after its clip finishes
-        this.play(this.lastIsMoving ? "walk" : "idle");
+        this.playInternal(this.lastIsMoving ? "walk" : "idle");
       });
     }
   }
