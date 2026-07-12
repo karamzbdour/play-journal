@@ -64,6 +64,22 @@ function paintRooms(groundLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon)
 }
 
 const MANIFEST_FETCH_TIMEOUT_MS = 5000;
+const LEVEL_COMPLETE_DELAY_MS = 1500;
+// How close the player needs to be to the stairs' tile origin to trigger completion -
+// generous enough that walking onto the tile from any side counts, without needing exact overlap.
+const STAIRS_REACH_RADIUS = TILE_SIZE * 0.75;
+
+// Places the stairs in the dungeon's last-generated room (distinct from the start room since
+// maxRooms is always >= 5, see getRoomCount) and clears collision on that tile so it's walkable.
+function placeStairs(map: Phaser.Tilemaps.Tilemap, stuffLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon) {
+  const finalRoom = dungeon.rooms[dungeon.rooms.length - 1];
+  stuffLayer.putTileAt(TILE_MAPPING.STAIRS, finalRoom.centerX, finalRoom.centerY);
+  stuffLayer.setCollision(TILE_MAPPING.STAIRS, false);
+  return {
+    x: map.tileToWorldX(finalRoom.centerX)!,
+    y: map.tileToWorldY(finalRoom.centerY)!,
+  };
+}
 
 // Never lets a slow/hanging SpriteProvider block dungeon creation - a timed-out fetch is treated
 // the same as "sprite id not found" (see pickManifest).
@@ -92,13 +108,20 @@ interface EnemyInstance {
   label: EntityLabel;
 }
 
-export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
+export function createDungeonScene(
+  PhaserLib: typeof Phaser,
+  config: GameConfig,
+  fontFamily: string,
+  onLevelComplete: () => void
+) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
     private playerLabel!: EntityLabel;
     private enemyInstances: EnemyInstance[] = [];
     private playerCombat!: PlayerCombat;
     private isPlayerDead = false;
+    private isLevelComplete = false;
+    private stairsPosition!: { x: number; y: number };
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private moodOverlay!: Phaser.GameObjects.Rectangle;
@@ -179,6 +202,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       // hard-coded and needs changing when more tilemaps are added
       this.groundLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
       this.stuffLayer.setCollisionByExclusion([-1, 6, 7, 8, 26]);
+
+      this.stairsPosition = placeStairs(map, this.stuffLayer, dungeon);
 
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -290,7 +315,7 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       // create() resolves sprite manifests asynchronously; guard against Phaser calling update()
       // on an earlier frame before it has finished.
       if (!this.player) return;
-      if (this.isPlayerDead) return;
+      if (this.isPlayerDead || this.isLevelComplete) return;
 
       this.player.update(delta);
       this.enemyInstances.forEach(({ enemy }) => enemy.update(delta));
@@ -308,7 +333,18 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
 
       if (this.player.health.isDead) {
         this.handlePlayerDeath();
+        return;
       }
+
+      if (this.hasReachedStairs()) {
+        this.handleLevelComplete();
+      }
+    }
+
+    private hasReachedStairs(): boolean {
+      const dx = this.player.x - this.stairsPosition.x;
+      const dy = this.player.y - this.stairsPosition.y;
+      return dx * dx + dy * dy < STAIRS_REACH_RADIUS * STAIRS_REACH_RADIUS;
     }
 
     private removeDeadEnemies() {
@@ -336,6 +372,21 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         })
         .setOrigin(0.5, 0.5)
         .setScrollFactor(0);
+    }
+
+    private handleLevelComplete() {
+      this.isLevelComplete = true;
+      this.add
+        .text(this.scale.width / 2, this.scale.height / 2, "LEVEL COMPLETE", {
+          fontFamily,
+          fontSize: "32px",
+          color: "#4ade80",
+          stroke: "#000000",
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0);
+      this.time.delayedCall(LEVEL_COMPLETE_DELAY_MS, () => onLevelComplete());
     }
   };
 }
