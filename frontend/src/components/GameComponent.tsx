@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type Phaser from "phaser";
 import { GameConfig } from "@/types/game";
 import { createDungeonScene } from "@/game/scenes/DungeonScene";
 import { getMoodBackground } from "@/lib/moodTint";
@@ -8,9 +9,6 @@ import { silkscreen } from "@/lib/fonts";
 
 interface GameComponentProps {
   config: GameConfig;
-  onScoreUpdate: (score: number) => void;
-  onGameWin: () => void;
-  onLevelUpdate?: (level: number, totalLevels: number) => void;
 }
 
 // Thin React/Phaser bootstrap: owns the container, the Phaser.Game lifecycle, and resizing.
@@ -18,7 +16,7 @@ interface GameComponentProps {
 // https://github.com/mikewesthad/phaser-3-tilemap-blog-posts.
 export default function GameComponent({ config }: GameComponentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<any>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;

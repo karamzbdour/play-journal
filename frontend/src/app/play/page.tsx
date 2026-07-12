@@ -20,26 +20,10 @@ const GameComponent = dynamic(() => import("../../components/GameComponent"), {
   ),
 });
 
-interface WSLog {
-  timestamp: string;
-  type: string;
-  message: string;
-  badge?: string;
-}
-
 export default function PlayPage() {
   const router = useRouter();
   const [gameConfig, setGameConfigState] = useState<GameConfig | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
-
-  // Game state
-  const [currentScore, setCurrentScore] = useState(0);
-  const [gameWon, setGameWon] = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(1);
-
-  // WebSocket state (no UI right now, kept so the backend event feed still connects)
-  const [wsActive, setWsActive] = useState(false);
-  const [wsLogs, setWsLogs] = useState<WSLog[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
 
   // Load the config handed off from the journal page; bounce back if there isn't one
@@ -52,84 +36,22 @@ export default function PlayPage() {
     }
   }, [router]);
 
-  const addLog = (type: string, message: string, badge?: string) => {
-    const time = new Date().toLocaleTimeString();
-    setWsLogs((prev) => [...prev, { timestamp: time, type, message, badge }]);
-  };
-
-  const connectWebSocket = () => {
-    if (socketRef.current) {
-      socketRef.current.close();
-    }
-
+  // Keep the backend event feed connected while playing. There's no feed UI
+  // yet, so messages just go to the console.
+  useEffect(() => {
+    if (!gameConfig || socketRef.current) return;
     try {
       const socket = new WebSocket("ws://localhost:8000/ws/live-feed");
       socketRef.current = socket;
-      setWsActive(true);
-
-      socket.onopen = () => {
-        addLog("system", "WebSocket connected to backend.");
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const type = data.type || "info";
-          const message = data.message || "";
-
-          if (type === "achievement") {
-            addLog("achievement", message, "ACHIEVEMENT");
-          } else if (type === "reward") {
-            addLog("reward", message, "POWER-UP");
-          } else {
-            addLog("info", message);
-          }
-        } catch {
-          addLog("info", event.data);
-        }
-      };
-
-      socket.onclose = () => {
-        setWsActive(false);
-        addLog("system", "WebSocket disconnected.");
-      };
-
-      socket.onerror = () => {
-        addLog("error", "WebSocket error occurred.");
-      };
+      socket.onmessage = (event) => console.debug("[live-feed]", event.data);
+      socket.onerror = () => console.debug("[live-feed] connection error");
     } catch {
-      addLog("error", "Failed to initialize WebSocket connection.");
-    }
-  };
-
-  // Connect WS once the config is ready, clean up socket on unmount
-  useEffect(() => {
-    if (gameConfig && !socketRef.current) {
-      connectWebSocket();
+      console.debug("[live-feed] failed to initialize WebSocket");
     }
     return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
+      socketRef.current?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameConfig]);
-
-  const handleScoreUpdate = (score: number) => {
-    setCurrentScore(score);
-  };
-
-  const handleGameWin = () => {
-    setGameWon(true);
-    addLog("achievement", "Mission Complete: You completed the level!", "VICTORY");
-  };
-
-  const handleLevelUpdate = (level: number, totalLevels: number) => {
-    setCurrentLevel(level);
-    if (level > 1) {
-      addLog("info", `Level ${level} / ${totalLevels} reached!`);
-    }
-  };
 
   const handleBackToJournal = () => {
     clearGameConfig();
@@ -161,12 +83,7 @@ export default function PlayPage() {
       <GameSettingsMenu />
 
       <div className="w-full h-full">
-        <GameComponent
-          config={gameConfig}
-          onScoreUpdate={handleScoreUpdate}
-          onGameWin={handleGameWin}
-          onLevelUpdate={handleLevelUpdate}
-        />
+        <GameComponent config={gameConfig} />
       </div>
     </div>
   );
