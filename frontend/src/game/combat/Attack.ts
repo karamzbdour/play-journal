@@ -42,4 +42,16 @@ export const ATTACKS: AttackDefinition[] = [
     requiresLineOfSight: true,
     maxRangeTiles: 8,
   },
+  {
+    id: "venom_spit",
+    name: "Venom Spit",
+    minAggression: 2,
+    cooldownMs: 5000,
+    effects: [
+      { kind: "status", effectId: "poison", target: "target", durationMs: 3000 },
+      { kind: "damage", target: "target", amount: 8 },
+    ],
+    requiresLineOfSight: true,
+    maxRangeTiles: 8,
+  },
 ];

@@ -14,6 +14,7 @@ load_dotenv()
 from auth import UserSignUp, UserSignIn, get_current_user
 from database import get_supabase_client
 
+MOCK_AUTH_ENABLED = os.environ.get("USE_MOCK_AUTH", "").lower() in {"1", "true", "yes", "on"}
 
 app = FastAPI(
     title="Play-Journal API",
@@ -81,6 +82,19 @@ def signup(user_data: UserSignUp):
     """
     Registers a new user in Supabase Auth.
     """
+    if MOCK_AUTH_ENABLED:
+        return {
+            "message": "User registered successfully.",
+            "user_id": "mock-user",
+            "session_active": True,
+            "access_token": "mock-token",
+            "user": {
+                "id": "mock-user",
+                "email": user_data.email,
+                "user_metadata": {"full_name": user_data.full_name} if user_data.full_name else {}
+            }
+        }
+
     supabase_client = get_supabase_client()
     try:
         options = {}
@@ -113,6 +127,18 @@ def login(user_data: UserSignIn):
     Authenticates a user with email and password in Supabase.
     Returns access and refresh tokens.
     """
+    if MOCK_AUTH_ENABLED:
+        return {
+            "access_token": "mock-token",
+            "refresh_token": "mock-refresh-token",
+            "token_type": "bearer",
+            "user": {
+                "id": "mock-user",
+                "email": user_data.email,
+                "user_metadata": {}
+            }
+        }
+
     supabase_client = get_supabase_client()
     try:
         response = supabase_client.auth.sign_in_with_password({

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import StatusEffectController from "@/game/combat/StatusEffectController";
+import Health from "@/game/combat/Health";
 
 describe("StatusEffectController", () => {
   let controller: StatusEffectController;
@@ -49,6 +50,16 @@ describe("StatusEffectController", () => {
 
   it("ignores unknown effect ids", () => {
     expect(controller.apply("not_a_real_effect", 1000)).toBe(false);
+  });
+
+  it("ticks poison damage over time while the effect is active", () => {
+    const health = new Health(100);
+    const controllerWithHealth = new StatusEffectController((amount) => health.takeDamage(amount));
+    controllerWithHealth.apply("poison", 4000);
+
+    controllerWithHealth.update(1000);
+
+    expect(health.getRatio()).toBe(0.98);
   });
 
   describe("getRemainingRatio", () => {

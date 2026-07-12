@@ -24,6 +24,7 @@ export default function PlayPage() {
   const router = useRouter();
   const [gameConfig, setGameConfigState] = useState<GameConfig | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
   // Load the config handed off from the journal page; bounce back if there isn't one
@@ -58,6 +59,16 @@ export default function PlayPage() {
     router.push("/");
   };
 
+  const handleGameOver = () => {
+    setIsGameOver(true);
+  };
+
+  const handleRestart = () => {
+    clearGameConfig();
+    setIsGameOver(false);
+    router.push("/");
+  };
+
   if (!checkedStorage) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-950 text-slate-400 text-sm">
@@ -83,8 +94,25 @@ export default function PlayPage() {
       <GameSettingsMenu />
 
       <div className="w-full h-full">
-        <GameComponent config={gameConfig} />
+        <GameComponent config={gameConfig} onGameOver={handleGameOver} />
       </div>
+
+      {isGameOver && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900/90 p-8 text-center shadow-2xl">
+            <p className="text-4xl font-black tracking-[0.2em] text-red-400">GAME OVER</p>
+            <p className="mt-4 text-sm leading-6 text-slate-300">
+              The dungeon claimed your run. Return to the main page and begin another tale.
+            </p>
+            <button
+              onClick={handleRestart}
+              className="mt-6 w-full rounded-2xl border border-amber-500/40 bg-amber-500/90 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"
+            >
+              Return to Main Page
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -43,4 +43,25 @@ export const STATUS_EFFECTS: Record<string, StatusEffectDefinition> = {
     color: "#fb923c",
     tags: ["debuff"],
   },
+  lunge: {
+    id: "lunge",
+    label: "LUNGE",
+    color: "#f59e0b",
+    tags: ["buff"],
+  },
+  block: {
+    id: "block",
+    label: "BLOCK",
+    color: "#60a5fa",
+    tags: ["buff"],
+    blocksTags: ["cc"],
+    magnitude: 0.5,
+  },
+  poison: {
+    id: "poison",
+    label: "POISON",
+    color: "#22c55e",
+    tags: ["debuff"],
+    magnitude: 0.02,
+  },
 };

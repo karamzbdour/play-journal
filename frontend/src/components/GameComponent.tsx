@@ -9,12 +9,13 @@ import { silkscreen } from "@/lib/fonts";
 
 interface GameComponentProps {
   config: GameConfig;
+  onGameOver?: () => void;
 }
 
 // Thin React/Phaser bootstrap: owns the container, the Phaser.Game lifecycle, and resizing.
 // Actual gameplay lives in scene modules under src/game/, mirroring the module split used by
 // https://github.com/mikewesthad/phaser-3-tilemap-blog-posts.
-export default function GameComponent({ config }: GameComponentProps) {
+export default function GameComponent({ config, onGameOver }: GameComponentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -26,7 +27,7 @@ export default function GameComponent({ config }: GameComponentProps) {
     import("phaser").then((Phaser) => {
       if (isDestroyed) return;
 
-      const DungeonScene = createDungeonScene(Phaser, config, silkscreen.style.fontFamily);
+      const DungeonScene = createDungeonScene(Phaser, config, silkscreen.style.fontFamily, onGameOver);
 
       const initialWidth = containerRef.current?.clientWidth || 800;
       const initialHeight = containerRef.current?.clientHeight || 600;
@@ -78,7 +79,7 @@ export default function GameComponent({ config }: GameComponentProps) {
         gameRef.current = null;
       }
     };
-  }, [config]);
+  }, [config, onGameOver]);
 
   return (
     <div className="w-full h-full min-h-[400px] relative overflow-hidden bg-slate-950">

@@ -28,10 +28,8 @@ MANIFEST
 
 # Environments
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -57,7 +55,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Serverless directories
+# Serverless directories`
 .serverless/
 
 # OS Files
@@ -78,3 +76,4 @@ pyrightconfig.json
 
 # Local git worktrees used for isolated feature execution
 .worktrees/
+

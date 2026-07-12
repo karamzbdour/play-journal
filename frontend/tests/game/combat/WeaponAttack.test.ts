@@ -38,6 +38,18 @@ describe("WEAPON_ATTACKS catalog", () => {
       }
     }
   });
+
+  it("includes a lunge-style attack that applies the lunge effect", () => {
+    expect(
+      WEAPON_ATTACKS.some((attack) => attack.effects.some((component) => component.kind === "status" && component.effectId === "lunge"))
+    ).toBe(true);
+  });
+
+  it("includes a defensive block-style attack that applies the block effect", () => {
+    expect(
+      WEAPON_ATTACKS.some((attack) => attack.effects.some((component) => component.kind === "status" && component.effectId === "block"))
+    ).toBe(true);
+  });
 });
 
 describe("BASIC_ATTACK", () => {

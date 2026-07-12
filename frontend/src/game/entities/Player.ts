@@ -13,8 +13,8 @@ const PLAYER_MAX_HP = 100;
 
 export default class Player implements CombatEntity {
   public sprite: Phaser.GameObjects.Arc;
-  public statusEffects: StatusEffectController = new StatusEffectController();
-  public health: Health = new Health(PLAYER_MAX_HP);
+  public statusEffects: StatusEffectController;
+  public health: Health;
   public weapon: Weapon;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
@@ -29,6 +29,8 @@ export default class Player implements CombatEntity {
 
   constructor(scene: Phaser.Scene, x: number, y: number, weapon: Weapon) {
     this.weapon = weapon;
+    this.health = new Health(PLAYER_MAX_HP);
+    this.statusEffects = new StatusEffectController((amount) => this.health.takeDamage(amount));
     this.sprite = scene.add.circle(x, y, 8, 0xfacc15);
     scene.physics.add.existing(this.sprite);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);

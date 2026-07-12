@@ -12,6 +12,7 @@ load_dotenv()
 
 # Environment variables
 SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
+MOCK_AUTH_ENABLED = os.environ.get("USE_MOCK_AUTH", "").lower() in {"1", "true", "yes", "on"}
 
 # Security schema for route protection
 security = HTTPBearer()
@@ -70,6 +71,14 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     Returns the decoded user payload or raises HTTP 401.
     """
     token = credentials.credentials
+
+    if MOCK_AUTH_ENABLED and token == "mock-token":
+        return {
+            "sub": "mock-user",
+            "email": "demo@example.com",
+            "role": "authenticated",
+            "aud": "authenticated",
+        }
     
     if not SUPABASE_JWT_SECRET:
         raise HTTPException(

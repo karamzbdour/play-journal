@@ -42,4 +42,10 @@ describe("ATTACKS catalog", () => {
     const brace = ATTACKS.find((a) => a.id === "brace")!;
     expect(brace.effects.some((c) => c.kind === "damage")).toBe(false);
   });
+
+  it("includes a poison-style attack with a poison status effect", () => {
+    const venomSpit = ATTACKS.find((a) => a.id === "venom_spit");
+    expect(venomSpit).toBeDefined();
+    expect(venomSpit?.effects.some((component) => component.kind === "status" && component.effectId === "poison")).toBe(true);
+  });
 });

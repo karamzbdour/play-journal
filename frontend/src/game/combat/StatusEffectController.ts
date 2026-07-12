@@ -4,10 +4,16 @@ interface ActiveEffect {
   def: StatusEffectDefinition;
   remainingMs: number;
   totalMs: number;
+  tickAccumulatorMs: number;
 }
 
 export default class StatusEffectController {
   private active: Map<string, ActiveEffect> = new Map();
+  private damageTickHandler?: (damageAmount: number) => void;
+
+  constructor(damageTickHandler?: (damageAmount: number) => void) {
+    this.damageTickHandler = damageTickHandler;
+  }
 
   apply(effectId: string, durationMs: number): boolean {
     const def = STATUS_EFFECTS[effectId];
@@ -19,7 +25,7 @@ export default class StatusEffectController {
       }
     }
 
-    this.active.set(effectId, { def, remainingMs: durationMs, totalMs: durationMs });
+    this.active.set(effectId, { def, remainingMs: durationMs, totalMs: durationMs, tickAccumulatorMs: 0 });
     return true;
   }
 
@@ -45,6 +51,19 @@ export default class StatusEffectController {
   update(deltaMs: number): void {
     for (const [id, effect] of this.active) {
       effect.remainingMs -= deltaMs;
+
+      if (effect.def.id === "poison") {
+        effect.tickAccumulatorMs += deltaMs;
+        const tickIntervalMs = 1000;
+        while (effect.tickAccumulatorMs >= tickIntervalMs) {
+          effect.tickAccumulatorMs -= tickIntervalMs;
+          if (effect.def.magnitude && effect.def.magnitude > 0 && this.damageTickHandler) {
+            const damageAmount = Math.max(1, Math.round(100 * effect.def.magnitude));
+            this.damageTickHandler(damageAmount);
+          }
+        }
+      }
+
       if (effect.remainingMs <= 0) {
         this.active.delete(id);
       }

@@ -50,6 +50,21 @@ export const WEAPON_ATTACKS: WeaponAttackDefinition[] = [
     cooldownMs: 3000,
     effects: [{ kind: "status", effectId: "charge_time", target: "self", durationMs: 1200 }],
   },
+  {
+    id: "lunge_attack",
+    name: "Lunge Attack",
+    cooldownMs: 3500,
+    effects: [
+      { kind: "status", effectId: "lunge", target: "self", durationMs: 1000 },
+      { kind: "damage", target: "target", amount: 14 },
+    ],
+  },
+  {
+    id: "block",
+    name: "Block",
+    cooldownMs: 2500,
+    effects: [{ kind: "status", effectId: "block", target: "self", durationMs: 2000 }],
+  },
 ];
 
 // The player's default attack (SPACE) - not part of the randomized `attackIds` pool.

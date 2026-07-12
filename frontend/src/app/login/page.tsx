@@ -90,112 +90,67 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="tome-scene flex flex-col items-center justify-center min-h-screen px-4">
-      {/* Tome themed login card */}
-      <div 
-        className="w-full max-w-md p-8 border-2 rounded-lg shadow-2xl relative z-10 flex flex-col gap-6"
-        style={{
-          background: "linear-gradient(145deg, #2a1b12 0%, #1f120a 100%)",
-          borderColor: "#4a3325",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 50px rgba(251, 191, 36, 0.05)"
-        }}
-      >
+    <div className="storybook-scene">
+      <div className="storybook-card">
         <div className="text-center">
-          <h2 
-            className="text-3xl font-extrabold tracking-tight uppercase"
-            style={{ 
-              color: "var(--torch)", 
-              fontFamily: "var(--font-sans)", 
-              textShadow: "0 0 15px rgba(251,191,36,0.3)" 
-            }}
-          >
-            {isRegister ? "Join the Quest" : "Enter the Tome"}
+          <h2 className="storybook-heading">
+            {isRegister ? "Join the Chronicle" : "Enter the Tome"}
           </h2>
-          <p className="text-xs mt-2" style={{ color: "#8a7550" }}>
-            {isRegister ? "Create a record in the annals" : "Verify your identity key"}
+          <p className="storybook-subtitle">
+            {isRegister ? "Create your entry in the annals." : "Unlock your journal with the secret key."}
           </p>
         </div>
 
         {error && (
-          <div 
-            className="p-3 rounded text-sm text-red-200 border border-red-900 bg-red-950/50"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <div className="storybook-alert storybook-alert-error">
             <strong>Error:</strong> {error}
           </div>
         )}
 
         {message && (
-          <div 
-            className="p-3 rounded text-sm text-amber-200 border border-amber-900 bg-amber-950/50"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
+          <div className="storybook-alert storybook-alert-note">
             {message}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isRegister && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold uppercase" style={{ color: "#a18262" }}>
-                Full Name
-              </label>
+            <div className="flex flex-col gap-2">
+              <label className="storybook-label">Full Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Adventurer Name"
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 transition-all"
-                style={{
-                  background: "#120804",
-                  borderColor: "#5c4033",
-                  color: "#d9c69e",
-                  fontSize: "0.875rem"
-                }}
+                className="storybook-input"
               />
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase" style={{ color: "#a18262" }}>
-              Email Address
-            </label>
+          <div className="flex flex-col gap-2">
+            <label className="storybook-label">Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="scroll@kingdom.com"
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 transition-all"
-              style={{
-                background: "#120804",
-                borderColor: "#5c4033",
-                color: "#d9c69e",
-                fontSize: "0.875rem"
-              }}
+              className="storybook-input"
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase" style={{ color: "#a18262" }}>
-              Password
-            </label>
+          <div className="flex flex-col gap-2">
+            <label className="storybook-label">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 transition-all"
-              style={{
-                background: "#120804",
-                borderColor: "#5c4033",
-                color: "#d9c69e",
-                fontSize: "0.875rem"
-              }}
+              className="storybook-input"
             />
             {isRegister && (
-              <span className="text-[10px]" style={{ color: "#6e5841" }}>
+              <span className="text-[10px]" style={{ color: "#7d6447" }}>
                 Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special symbol.
               </span>
             )}
@@ -204,18 +159,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded font-bold uppercase tracking-wider text-sm transition-all cursor-pointer mt-2"
-            style={{
-              background: loading ? "#4d3929" : "var(--torch)",
-              color: loading ? "#a38269" : "#1a1005",
-              boxShadow: "0 4px 6px rgba(0,0,0,0.2)"
-            }}
+            className="storybook-button"
           >
             {loading ? "Decrypting..." : isRegister ? "Register" : "Sign In"}
           </button>
         </form>
 
-        <div className="text-center text-xs border-t pt-4" style={{ borderColor: "#3e271a" }}>
+        <div className="text-center mt-4">
           <button
             type="button"
             onClick={() => {
@@ -223,8 +173,7 @@ export default function LoginPage() {
               setError(null);
               setMessage(null);
             }}
-            className="hover:underline cursor-pointer font-medium"
-            style={{ color: "#8a7550" }}
+            className="storybook-link"
           >
             {isRegister
               ? "Already possess a key? Sign in"

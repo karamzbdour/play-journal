@@ -9,7 +9,7 @@ import { hexToNumber } from "@/lib/color";
 // systems work on a non-player entity; real enemy movement/AI is a separate feature.
 export default class Enemy implements AggressiveCombatEntity {
   public sprite: Phaser.GameObjects.Arc;
-  public statusEffects: StatusEffectController = new StatusEffectController();
+  public statusEffects: StatusEffectController;
   public health: Health;
   public aggressionLevel: number;
 
@@ -26,6 +26,7 @@ export default class Enemy implements AggressiveCombatEntity {
     this.sprite = scene.add.circle(x, y, 8, hexToNumber(color));
     this.aggressionLevel = aggressionLevel;
     this.health = new Health(maxHp);
+    this.statusEffects = new StatusEffectController((amount) => this.health.takeDamage(amount));
   }
 
   update(deltaMs: number) {

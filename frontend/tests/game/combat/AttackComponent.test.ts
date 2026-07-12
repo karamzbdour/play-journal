@@ -50,6 +50,17 @@ describe("resolveAttackComponents", () => {
     expect(target.health.getRatio()).toBe(0.8);
   });
 
+  it("reduces incoming damage while block is active", () => {
+    const self = makeEntity();
+    const target = makeEntity();
+    target.statusEffects.apply("block", 1000);
+    const components: AttackComponent[] = [{ kind: "damage", target: "target", amount: 10 }];
+
+    resolveAttackComponents(components, self, target, 0);
+
+    expect(target.health.getRatio()).toBe(0.95);
+  });
+
   it("deals damage to self when the component targets self", () => {
     const self = makeEntity();
     const target = makeEntity();

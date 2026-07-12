@@ -1,3 +1,5 @@
+import StatusEffectController from "./StatusEffectController";
+
 export default class Health {
   private current: number;
 
@@ -5,8 +7,10 @@ export default class Health {
     this.current = max;
   }
 
-  takeDamage(amount: number): void {
-    this.current = Math.max(0, this.current - amount);
+  takeDamage(amount: number, statusEffects?: StatusEffectController): void {
+    const blockMultiplier = statusEffects?.getMagnitude("block", 1) ?? 1;
+    const effectiveDamage = Math.max(0, amount * blockMultiplier);
+    this.current = Math.max(0, this.current - effectiveDamage);
   }
 
   get isDead(): boolean {

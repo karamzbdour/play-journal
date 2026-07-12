@@ -66,9 +66,10 @@ interface EnemyInstance {
   label: EntityLabel;
 }
 
-export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string) {
+export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig, fontFamily: string, onGameOver?: () => void) {
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
+    private onGameOver = onGameOver;
     private playerLabel!: EntityLabel;
     private enemyInstances: EnemyInstance[] = [];
     private playerCombat!: PlayerCombat;
@@ -256,7 +257,10 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
     }
 
     private handlePlayerDeath() {
+      if (this.isPlayerDead) return;
+
       this.isPlayerDead = true;
+      this.onGameOver?.();
       this.add
         .text(this.scale.width / 2, this.scale.height / 2, "YOU DIED", {
           fontFamily,

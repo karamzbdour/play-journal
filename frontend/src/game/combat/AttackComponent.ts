@@ -32,7 +32,7 @@ export function resolveAttackComponents(
     if (!recipient) continue;
 
     if (component.kind === "damage") {
-      recipient.health.takeDamage(component.amount ?? fallbackDamage);
+      recipient.health.takeDamage(component.amount ?? fallbackDamage, recipient.statusEffects);
     } else {
       recipient.statusEffects.apply(component.effectId, component.durationMs);
     }
