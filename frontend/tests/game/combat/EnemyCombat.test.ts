@@ -5,6 +5,7 @@ import StatusEffectController from "@/game/combat/StatusEffectController";
 import Health from "@/game/combat/Health";
 import { ATTACKS, AttackDefinition } from "@/game/combat/Attack";
 import { LineOfSightBlocker } from "@/game/combat/lineOfSight";
+import CooldownTracker from "@/game/combat/CooldownTracker";
 
 const OPEN_BLOCKER: LineOfSightBlocker = { isBlocked: () => false };
 
@@ -20,18 +21,21 @@ function makeEntity(aggressionLevel: number): AggressiveCombatEntity {
 
 describe("getAvailableAttacks", () => {
   it("only includes attacks at or below the given aggression level", () => {
-    const available = getAvailableAttacks(1, new Map());
+    const available = getAvailableAttacks(1, () => true);
     expect(available.map((a) => a.id)).toEqual(["brace"]);
   });
 
   it("excludes attacks still on cooldown", () => {
-    const cooldowns = new Map([["brace", 2000]]);
-    expect(getAvailableAttacks(1, cooldowns).map((a) => a.id)).toEqual([]);
+    const cooldowns = new CooldownTracker();
+    cooldowns.start("brace", 2000);
+    expect(getAvailableAttacks(1, (id) => cooldowns.isReady(id)).map((a) => a.id)).toEqual([]);
   });
 
-  it("includes an attack once its cooldown has reached zero", () => {
-    const cooldowns = new Map([["brace", 0]]);
-    expect(getAvailableAttacks(1, cooldowns).map((a) => a.id)).toEqual(["brace"]);
+  it("includes an attack once its cooldown has elapsed", () => {
+    const cooldowns = new CooldownTracker();
+    cooldowns.start("brace", 2000);
+    cooldowns.tick(2000);
+    expect(getAvailableAttacks(1, (id) => cooldowns.isReady(id)).map((a) => a.id)).toEqual(["brace"]);
   });
 });
 

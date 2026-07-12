@@ -4,6 +4,7 @@ import { LineOfSightBlocker, hasLineOfSight } from "./lineOfSight";
 import { Weapon } from "./Weapon";
 import { WEAPON_ATTACKS, BASIC_ATTACK } from "./WeaponAttack";
 import { resolveAttackComponents } from "./AttackComponent";
+import CooldownTracker from "./CooldownTracker";
 import { TILE_SIZE } from "../constants";
 
 export interface AttackInput {
@@ -34,8 +35,9 @@ function findNearestTarget(
 }
 
 export default class PlayerCombat {
-  private basicAttackCooldownMs = 0;
-  private abilityCooldowns: Map<string, number> = new Map();
+  // Holds the basic attack (keyed by BASIC_ATTACK.id, gated by the weapon's
+  // attack speed) alongside ability cooldowns; the id pools don't overlap.
+  private cooldowns = new CooldownTracker();
 
   constructor(
     private weapon: Weapon,
@@ -46,12 +48,7 @@ export default class PlayerCombat {
   ) {}
 
   update(deltaMs: number): void {
-    this.basicAttackCooldownMs = Math.max(0, this.basicAttackCooldownMs - deltaMs);
-    for (const [id, remaining] of this.abilityCooldowns) {
-      const next = remaining - deltaMs;
-      if (next <= 0) this.abilityCooldowns.delete(id);
-      else this.abilityCooldowns.set(id, next);
-    }
+    this.cooldowns.tick(deltaMs);
 
     if (this.input.isBasicAttackJustPressed()) this.tryBasicAttack();
     for (const slot of [0, 1, 2] as const) {
@@ -60,8 +57,8 @@ export default class PlayerCombat {
   }
 
   private tryBasicAttack(): void {
-    if (this.basicAttackCooldownMs > 0) return;
-    this.basicAttackCooldownMs = this.weapon.attackSpeedMs;
+    if (!this.cooldowns.isReady(BASIC_ATTACK.id)) return;
+    this.cooldowns.start(BASIC_ATTACK.id, this.weapon.attackSpeedMs);
 
     const target = findNearestTarget(
       this.self,
@@ -76,12 +73,12 @@ export default class PlayerCombat {
   private tryAbility(slot: 0 | 1 | 2): void {
     const attackId = this.weapon.attackIds[slot];
     if (!attackId) return;
-    if ((this.abilityCooldowns.get(attackId) ?? 0) > 0) return;
+    if (!this.cooldowns.isReady(attackId)) return;
 
     const definition = WEAPON_ATTACKS.find((a) => a.id === attackId);
     if (!definition) return;
 
-    this.abilityCooldowns.set(attackId, definition.cooldownMs);
+    this.cooldowns.start(attackId, definition.cooldownMs);
 
     const requiresTarget = definition.effects.some((component) => component.target === "target");
     const target = requiresTarget
