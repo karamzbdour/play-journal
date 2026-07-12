@@ -33,7 +33,10 @@ export default class Player implements CombatEntity {
   constructor(scene: Phaser.Scene, x: number, y: number, weapon: Weapon, manifest: SpriteManifest) {
     this.weapon = weapon;
     const idleClip = resolveClip(manifest, "idle");
-    this.sprite = scene.add.sprite(x, y, idleClip.textureKey);
+    // Explicit frame 0, not the default __BASE frame (the whole unsliced spritesheet strip) -
+    // physics.add.existing() below sizes the body from whatever frame is showing at this exact
+    // moment, and __BASE's width covers every frame in the sheet, not just one.
+    this.sprite = scene.add.sprite(x, y, idleClip.textureKey, 0);
     scene.physics.add.existing(this.sprite);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
     this.animationController = new AnimationController(scene, this.sprite, manifest);

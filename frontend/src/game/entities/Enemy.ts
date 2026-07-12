@@ -36,7 +36,9 @@ export default class Enemy implements AggressiveCombatEntity {
     manifest: SpriteManifest
   ) {
     const idleClip = resolveClip(manifest, "idle");
-    this.sprite = scene.add.sprite(x, y, idleClip.textureKey);
+    // Explicit frame 0, not the default __BASE frame (the whole unsliced spritesheet strip) -
+    // see the matching comment in Player.ts for why this matters once a body is attached.
+    this.sprite = scene.add.sprite(x, y, idleClip.textureKey, 0);
     this.sprite.setTint(hexToNumber(color));
     this.aggressionLevel = aggressionLevel;
     this.health = new Health(maxHp);
