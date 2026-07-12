@@ -71,30 +71,25 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     """
     token = credentials.credentials
     
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="SUPABASE_JWT_SECRET environment variable is not configured on the server."
-        )
-
+    from database import get_supabase_client
+    supabase_client = get_supabase_client()
     try:
-        # Decode and verify the JWT signature using the Supabase JWT secret
-        # Supabase JWTs are HS256 signed with the project's JWT secret
-        payload = jwt.decode(
-            token,
-            key=SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": True},
-            audience="authenticated"
-        )
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError as e:
+        response = supabase_client.auth.get_user(token)
+        if not response or not response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token: No user returned.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user = response.user
+        return {
+            "sub": user.id,
+            "email": user.email,
+            "role": getattr(user, "role", "authenticated"),
+            "user_metadata": getattr(user, "user_metadata", {})
+        }
+    except Exception as e:
+        print(f"Supabase Auth Verification Failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication token: {str(e)}",
