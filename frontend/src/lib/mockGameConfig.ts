@@ -4,7 +4,7 @@ export const mockGameConfig: GameConfig = {
   theme_id: "coder_coffee",
   theme_name: "Coder's Coffee Chase",
   background_color: "#0f172a",
-  player_sprite: "programmer",
+  player_sprite: "sliced_knight",
   player_speed: 350,
   collectible_type: "coffee",
   enemy_type: "bug",

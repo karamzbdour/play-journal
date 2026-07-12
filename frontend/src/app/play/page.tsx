@@ -83,7 +83,7 @@ export default function PlayPage() {
       <GameSettingsMenu />
 
       <div className="w-full h-full">
-        <GameComponent config={gameConfig} />
+        <GameComponent config={gameConfig} onLevelComplete={handleBackToJournal} />
       </div>
     </div>
   );
