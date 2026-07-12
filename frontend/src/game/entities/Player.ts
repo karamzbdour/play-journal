@@ -39,6 +39,10 @@ export default class Player implements CombatEntity {
     // physics.add.existing() below sizes the body from whatever frame is showing at this exact
     // moment, and __BASE's width covers every frame in the sheet, not just one.
     this.sprite = scene.add.sprite(x, y, idleClip.textureKey, 0);
+    // Enemies/bosses are added to the scene after the player, and Phaser draws same-depth
+    // GameObjects in insertion order - without this the player renders underneath them
+    // whenever their sprites overlap.
+    this.sprite.setDepth(1);
     scene.physics.add.existing(this.sprite);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
     this.animationController = new AnimationController(scene, this.sprite, manifest);
