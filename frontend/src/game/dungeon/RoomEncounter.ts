@@ -8,21 +8,24 @@ export interface TileBounds {
   bottom: number;
 }
 
-export interface BossHealth {
+export interface EncounterHealth {
   readonly isDead: boolean;
 }
 
-// Drives the doors guarding a boss room. Doors start open. Once the player steps past them into
-// the room's interior, they seal shut behind the player. They open again for good once the boss
-// dies - re-entering an already-cleared room never re-triggers the trap.
-export default class BossRoomEncounter {
+// Drives the doors guarding a special room (boss, swarm, ...). Doors start open. Once the player
+// steps past them into the room's interior, they seal shut behind the player. They open again for
+// good once every enemy spawned into the room dies - re-entering an already-cleared room never
+// re-triggers the trap. A room spawned with zero enemies is considered cleared immediately
+// (vacuously true), so it's never actually sealed - callers should always spawn at least one
+// enemy for a real encounter.
+export default class RoomEncounter {
   private triggered = false;
   private cleared = false;
 
   constructor(
     private readonly interior: TileBounds,
     private readonly doors: readonly Door[],
-    private readonly boss: BossHealth
+    private readonly enemies: readonly EncounterHealth[]
   ) {}
 
   get isCleared(): boolean {
@@ -32,7 +35,7 @@ export default class BossRoomEncounter {
   update(playerTileX: number, playerTileY: number): void {
     if (this.cleared) return;
 
-    if (this.boss.isDead) {
+    if (this.enemies.every((enemy) => enemy.isDead)) {
       this.cleared = true;
       this.doors.forEach((door) => door.open());
       return;

@@ -2,7 +2,6 @@ import type Phaser from "phaser";
 import Dungeon from "@mikewesthad/dungeon";
 import { TILE_SIZE } from "../constants";
 import Player from "../entities/Player";
-import Enemy from "../entities/Enemy";
 import { generateWeapon, randomWeaponCategory } from "../combat/Weapon";
 import TILE_MAPPING from "../tileMapping";
 import { GameConfig } from "@/types/game";
@@ -13,21 +12,27 @@ import { addRain, followCamera as rainFollowCamera } from "../effects/rain";
 import EntityLabel from "../ui/EntityLabel";
 import { loadSettings, subscribeSettings } from "../settings";
 import { getDisplayName } from "@/lib/auth";
-import EnemyCombat from "../combat/EnemyCombat";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
-import { prettifyName } from "@/lib/format";
 import { ClipDef, SpriteManifest } from "../animation/SpriteManifest";
 import { SpriteProvider, LocalSpriteProvider, GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
 import { pickManifest } from "../animation/resolveAnimation";
-import Door from "../dungeon/Door";
-import BossRoomEncounter from "../dungeon/BossRoomEncounter";
-import selectBossRoom from "../dungeon/selectBossRoom";
+import { DungeonRoom } from "../dungeon/DungeonRoom";
+import RoomEncounter from "../dungeon/RoomEncounter";
+import EnemySpawner, { SpawnedEnemy } from "../dungeon/EnemySpawner";
+import { spawnBossRoom } from "../dungeon/roomSpawnStrategies";
+import assignRoomKinds from "../dungeon/assignRoomKinds";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
   if (!Number.isFinite(lengthOfDay)) return 5;
   return Math.round(Math.min(10, Math.max(5, lengthOfDay)));
+}
+
+// One boss room per every 5 generated rooms (minimum 1), so bigger dungeons get more boss
+// encounters instead of always just one regardless of size.
+function getBossRoomCount(totalRooms: number): number {
+  return Math.max(1, Math.floor(totalRooms / 5));
 }
 
 // Paints every generated room onto the ground layer: floor, corners, walls,
@@ -63,21 +68,6 @@ function paintRooms(groundLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon)
         groundLayer.putTilesAt(TILE_MAPPING.DOOR.RIGHT, x + door.x, y + door.y - 1);
       }
     }
-  });
-}
-
-type DungeonRoom = Dungeon["rooms"][number];
-
-// One Door per connection point on the boss room's boundary. A door local to the top/bottom wall
-// (door.y is 0 or height-1) is sealed with the horizontal wall tile; one on the left/right wall
-// with the vertical tile - see TILE_MAPPING.DOOR.CLOSED.
-function buildBossRoomDoors(stuffLayer: Phaser.Tilemaps.TilemapLayer, room: DungeonRoom): Door[] {
-  return room.getDoorLocations().map((door) => {
-    const isHorizontalWall = door.y === 0 || door.y === room.height - 1;
-    const closedTileIndex = isHorizontalWall
-      ? TILE_MAPPING.DOOR.CLOSED.HORIZONTAL
-      : TILE_MAPPING.DOOR.CLOSED.VERTICAL;
-    return new Door(stuffLayer, room.x + door.x, room.y + door.y, closedTileIndex);
   });
 }
 
@@ -119,12 +109,6 @@ function manifestHasFailedTexture(manifest: SpriteManifest, failedKeys: Set<stri
   return (Object.values(manifest.clips) as ClipDef[]).some((clip) => failedKeys.has(clip.textureKey));
 }
 
-interface EnemyInstance {
-  enemy: Enemy;
-  combat: EnemyCombat;
-  label: EntityLabel;
-}
-
 export function createDungeonScene(
   PhaserLib: typeof Phaser,
   config: GameConfig,
@@ -134,7 +118,7 @@ export function createDungeonScene(
   return class DungeonScene extends PhaserLib.Scene {
     private player!: Player;
     private playerLabel!: EntityLabel;
-    private enemyInstances: EnemyInstance[] = [];
+    private enemyInstances: SpawnedEnemy[] = [];
     private playerCombat!: PlayerCombat;
     private isPlayerDead = false;
     private isLevelComplete = false;
@@ -142,8 +126,7 @@ export function createDungeonScene(
     private map!: Phaser.Tilemaps.Tilemap;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
-    private boss?: Enemy;
-    private bossRoomEncounter?: BossRoomEncounter;
+    private roomEncounters: RoomEncounter[] = [];
     private moodOverlay!: Phaser.GameObjects.Rectangle;
     private vignette?: Phaser.GameObjects.Image;
     private rainSpawnZone?: { x: number; y: number; width: number; height: number; getRandomPoint(p: { x: number; y: number }): void };
@@ -235,12 +218,13 @@ export function createDungeonScene(
       const finalRoom = dungeon.rooms[dungeon.rooms.length - 1];
       this.stairsPosition = placeStairs(map, this.stuffLayer, finalRoom);
 
-      // The boss occupies a room strictly between the start and end rooms, so the player can
-      // neither spawn in it nor find the stairs sealed inside it - see selectBossRoom and
-      // BossRoomEncounter for the door logic. Dungeons that generate too few rooms for a valid
-      // middle room simply have no boss for that level.
-      const bossRoom = selectBossRoom(dungeon.rooms);
-      const bossRoomDoors = bossRoom ? buildBossRoomDoors(this.stuffLayer, bossRoom) : [];
+      // Special rooms (currently just "boss") are assigned strictly between the start and end
+      // rooms, so the player can neither spawn in one nor find the stairs sealed inside one -
+      // see assignRoomKinds and EnemySpawner for the door-sealing logic. Dungeons that generate
+      // too few rooms for a valid middle choice simply get fewer (or zero) special rooms.
+      const roomKindAssignments = assignRoomKinds(dungeon.rooms, [
+        { kind: "boss", count: getBossRoomCount(dungeon.rooms.length) },
+      ]);
 
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -256,24 +240,6 @@ export function createDungeonScene(
 
       this.physics.add.collider(this.player.sprite, this.groundLayer);
       this.physics.add.collider(this.player.sprite, this.stuffLayer);
-
-      if (bossRoom) {
-        const bossX = map.tileToWorldX(bossRoom.centerX)!;
-        const bossY = map.tileToWorldY(bossRoom.centerY)!;
-        // Aggression 3 so it reaches all three example attacks (see combat/EnemyAttack.ts) over
-        // time; HP well above a regular enemy's so the fight actually takes a while.
-        const boss = new Enemy(this, bossX, bossY, config.enemy_color, 3, 150, enemyManifest);
-        boss.sprite.setScale(1.4);
-        this.boss = boss;
-
-        const interior = {
-          left: bossRoom.left + 1,
-          right: bossRoom.right - 1,
-          top: bossRoom.top + 1,
-          bottom: bossRoom.bottom - 1,
-        };
-        this.bossRoomEncounter = new BossRoomEncounter(interior, bossRoomDoors, boss.health);
-      }
 
       this.playerLabel = new EntityLabel(this, fontFamily, this.player.sprite, {
         name: getDisplayName() ?? "You",
@@ -295,20 +261,21 @@ export function createDungeonScene(
           !!this.groundLayer.getTileAtWorldXY(x, y)?.collides || !!this.stuffLayer.getTileAtWorldXY(x, y)?.collides,
       };
 
-      if (this.boss) {
-        const boss = this.boss;
-        const bossLabel = new EntityLabel(this, fontFamily, boss.sprite, {
-          name: `Boss ${prettifyName(config.enemy_type)}`,
-          statusEffects: boss.statusEffects,
-          health: boss.health,
-        });
-        // Player and Enemy implement CombatEntity themselves (live x/y getters),
-        // so both combat systems take the entities directly.
-        const bossCombat = new EnemyCombat(boss, () => this.player, blocker, {
-          onAttack: (attackId) => boss.animationController.play("attack", { abilityId: attackId }),
-        });
-        this.enemyInstances = [{ enemy: boss, combat: bossCombat, label: bossLabel }];
-      }
+      // Player and Enemy implement CombatEntity themselves (live x/y getters), so both combat
+      // systems take the entities directly.
+      const spawner = new EnemySpawner();
+      spawner.register("boss", spawnBossRoom);
+      const spawnResults = spawner.spawnAll(dungeon.rooms, roomKindAssignments, this.stuffLayer, {
+        scene: this,
+        map,
+        config,
+        enemyManifest,
+        fontFamily,
+        getPlayer: () => this.player,
+        blocker,
+      });
+      this.enemyInstances = spawnResults.flatMap((result) => result.spawned);
+      this.roomEncounters = spawnResults.map((result) => result.encounter);
 
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
@@ -348,7 +315,7 @@ export function createDungeonScene(
       }
 
       this.add
-        .text(100, 10, `${dungeon.rooms.length} rooms generated`, {
+        .text(100, 10, `${dungeon.rooms.length} rooms generated, ${spawnResults.length} special`, {
           fontSize: "14px",
           fontFamily: "monospace",
           color: "#e2e8f0",
@@ -374,10 +341,9 @@ export function createDungeonScene(
       this.playerLabel.update();
       this.enemyInstances.forEach(({ label }) => label.update());
 
-      this.bossRoomEncounter?.update(
-        this.map.worldToTileX(this.player.x)!,
-        this.map.worldToTileY(this.player.y)!
-      );
+      const playerTileX = this.map.worldToTileX(this.player.x)!;
+      const playerTileY = this.map.worldToTileY(this.player.y)!;
+      this.roomEncounters.forEach((encounter) => encounter.update(playerTileX, playerTileY));
 
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);
@@ -388,7 +354,7 @@ export function createDungeonScene(
         return;
       }
 
-      if ((this.bossRoomEncounter?.isCleared ?? true) && this.hasReachedStairs()) {
+      if (this.roomEncounters.every((encounter) => encounter.isCleared) && this.hasReachedStairs()) {
         this.handleLevelComplete();
       }
     }
@@ -400,7 +366,7 @@ export function createDungeonScene(
     }
 
     private removeDeadEnemies() {
-      const alive: EnemyInstance[] = [];
+      const alive: SpawnedEnemy[] = [];
       for (const instance of this.enemyInstances) {
         if (instance.enemy.health.isDead) {
           instance.label.destroy();
