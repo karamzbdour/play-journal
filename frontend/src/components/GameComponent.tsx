@@ -5,7 +5,7 @@ import type Phaser from "phaser";
 import { GameConfig } from "@/types/game";
 import { createDungeonScene } from "@/game/scenes/DungeonScene";
 import { getMoodBackground } from "@/lib/moodTint";
-import { silkscreen } from "@/lib/fonts";
+import { caveat, silkscreen } from "@/lib/fonts";
 
 interface GameComponentProps {
   config: GameConfig;
@@ -31,7 +31,13 @@ export default function GameComponent({ config, onLevelComplete }: GameComponent
     import("phaser").then((Phaser) => {
       if (isDestroyed) return;
 
-      const DungeonScene = createDungeonScene(Phaser, config, silkscreen.style.fontFamily, () => onLevelCompleteRef.current());
+      const DungeonScene = createDungeonScene(
+        Phaser,
+        config,
+        silkscreen.style.fontFamily,
+        caveat.style.fontFamily,
+        () => onLevelCompleteRef.current()
+      );
 
       const initialWidth = containerRef.current?.clientWidth || 800;
       const initialHeight = containerRef.current?.clientHeight || 600;

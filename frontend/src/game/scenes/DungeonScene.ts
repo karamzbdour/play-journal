@@ -24,6 +24,7 @@ import { spawnBossRoom } from "../dungeon/roomSpawnStrategies";
 import assignRoomKinds from "../dungeon/assignRoomKinds";
 import buildRoomDoors from "../dungeon/buildRoomDoors";
 import Door from "../dungeon/Door";
+import TutorialBanner from "../ui/TutorialBanner";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
@@ -115,6 +116,7 @@ export function createDungeonScene(
   PhaserLib: typeof Phaser,
   config: GameConfig,
   fontFamily: string,
+  handFontFamily: string,
   onLevelComplete: () => void
 ) {
   return class DungeonScene extends PhaserLib.Scene {
@@ -124,6 +126,7 @@ export function createDungeonScene(
     private playerCombat!: PlayerCombat;
     private isPlayerDead = false;
     private isLevelComplete = false;
+    private tutorialBanner?: TutorialBanner;
     private stairsPosition!: { x: number; y: number };
     private map!: Phaser.Tilemaps.Tilemap;
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
@@ -339,12 +342,32 @@ export function createDungeonScene(
           padding: { x: 6, y: 4 },
         })
         .setScrollFactor(0);
+
+      // Level-start tutorial, sourced from the journal entry's own game_rules - freezes gameplay
+      // (see the update() gate below) until the player has stepped through every line, so SPACE
+      // advancing text can never also fire the player's SPACE-triggered basic attack.
+      if (config.game_rules.length > 0) {
+        this.tutorialBanner = new TutorialBanner(
+          this,
+          { heading: fontFamily, hand: handFontFamily },
+          config.game_rules,
+          () => {
+            this.tutorialBanner = undefined;
+          }
+        );
+      }
     }
 
     update(time: number, delta: number) {
       // create() resolves sprite manifests asynchronously; guard against Phaser calling update()
       // on an earlier frame before it has finished.
       if (!this.player) return;
+
+      if (this.tutorialBanner) {
+        this.tutorialBanner.update();
+        return;
+      }
+
       if (this.isPlayerDead || this.isLevelComplete) return;
 
       this.player.update(delta);
