@@ -44,7 +44,8 @@ export default class PlayerCombat {
     private self: CombatEntity,
     private getEnemies: () => CombatEntity[],
     private blocker: LineOfSightBlocker,
-    private input: AttackInput
+    private input: AttackInput,
+    private options: { onAttack?: (attackId: string) => void } = {}
   ) {}
 
   update(deltaMs: number): void {
@@ -68,6 +69,7 @@ export default class PlayerCombat {
     );
     if (!target) return;
     resolveAttackComponents(BASIC_ATTACK.effects, this.self, target, this.weapon.damage);
+    this.options.onAttack?.(BASIC_ATTACK.id);
   }
 
   private tryAbility(slot: 0 | 1 | 2): void {
@@ -87,6 +89,7 @@ export default class PlayerCombat {
     if (requiresTarget && !target) return;
 
     resolveAttackComponents(definition.effects, this.self, target, this.weapon.damage);
+    this.options.onAttack?.(attackId);
   }
 }
 

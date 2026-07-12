@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import PlayerCombat, { AttackInput } from "@/game/combat/PlayerCombat";
 import { CombatEntity } from "@/game/combat/CombatEntity";
 import StatusEffectController from "@/game/combat/StatusEffectController";
@@ -224,5 +224,78 @@ describe("PlayerCombat damage", () => {
 
     expect(self.health.getRatio()).toBe(1);
     expect(enemy.health.getRatio()).toBe(1);
+  });
+});
+
+describe("PlayerCombat onAttack callback", () => {
+  it("calls onAttack with the basic attack's id when the basic attack lands", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isBasicAttackJustPressed: () => true });
+    const onAttack = vi.fn();
+    const combat = new PlayerCombat(makeWeapon(), self, () => [enemy], OPEN_BLOCKER, input, { onAttack });
+
+    combat.update(0);
+
+    expect(onAttack).toHaveBeenCalledWith("basic_attack");
+  });
+
+  it("does not call onAttack when the basic attack whiffs (no qualifying enemy)", () => {
+    const self = makeEntity();
+    const farEnemy = makeEntity(1000, 0);
+    const input = makeInput({ isBasicAttackJustPressed: () => true });
+    const onAttack = vi.fn();
+    const combat = new PlayerCombat(makeWeapon(), self, () => [farEnemy], OPEN_BLOCKER, input, { onAttack });
+
+    combat.update(0);
+
+    expect(onAttack).not.toHaveBeenCalled();
+  });
+
+  it("calls onAttack with the ability's id when a target-requiring ability fires", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isAbilityJustPressed: (slot) => slot === 0 });
+    const weapon = makeWeapon({ attackIds: ["puncture"] });
+    const onAttack = vi.fn();
+    const combat = new PlayerCombat(weapon, self, () => [enemy], OPEN_BLOCKER, input, { onAttack });
+
+    combat.update(0);
+
+    expect(onAttack).toHaveBeenCalledWith("puncture");
+  });
+
+  it("calls onAttack for a self-only ability even with no enemy present", () => {
+    const self = makeEntity();
+    const input = makeInput({ isAbilityJustPressed: (slot) => slot === 0 });
+    const weapon = makeWeapon({ attackIds: ["battle_focus"] });
+    const onAttack = vi.fn();
+    const combat = new PlayerCombat(weapon, self, () => [], OPEN_BLOCKER, input, { onAttack });
+
+    combat.update(0);
+
+    expect(onAttack).toHaveBeenCalledWith("battle_focus");
+  });
+
+  it("does not call onAttack when a target-requiring ability has no enemy in range", () => {
+    const self = makeEntity();
+    const farEnemy = makeEntity(1000, 0);
+    const input = makeInput({ isAbilityJustPressed: (slot) => slot === 0 });
+    const weapon = makeWeapon({ attackIds: ["puncture"] });
+    const onAttack = vi.fn();
+    const combat = new PlayerCombat(weapon, self, () => [farEnemy], OPEN_BLOCKER, input, { onAttack });
+
+    combat.update(0);
+
+    expect(onAttack).not.toHaveBeenCalled();
+  });
+
+  it("works with no onAttack option provided at all", () => {
+    const self = makeEntity();
+    const enemy = makeEntity(10, 0);
+    const input = makeInput({ isBasicAttackJustPressed: () => true });
+    const combat = new PlayerCombat(makeWeapon(), self, () => [enemy], OPEN_BLOCKER, input);
+
+    expect(() => combat.update(0)).not.toThrow();
   });
 });

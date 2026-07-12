@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ATTACKS } from "@/game/combat/Attack";
+import { ATTACKS } from "@/game/combat/EnemyAttack";
 import { STATUS_EFFECTS } from "@/game/combat/StatusEffect";
 
 describe("ATTACKS catalog", () => {

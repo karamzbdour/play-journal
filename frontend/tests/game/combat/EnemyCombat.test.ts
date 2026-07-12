@@ -3,7 +3,7 @@ import EnemyCombat, { getAvailableAttacks } from "@/game/combat/EnemyCombat";
 import { AggressiveCombatEntity, CombatEntity } from "@/game/combat/CombatEntity";
 import StatusEffectController from "@/game/combat/StatusEffectController";
 import Health from "@/game/combat/Health";
-import { ATTACKS, AttackDefinition } from "@/game/combat/Attack";
+import { ATTACKS, AttackDefinition } from "@/game/combat/EnemyAttack";
 import { LineOfSightBlocker } from "@/game/combat/lineOfSight";
 import CooldownTracker from "@/game/combat/CooldownTracker";
 
@@ -99,6 +99,36 @@ describe("EnemyCombat", () => {
     const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, { selector: () => null });
     expect(() => combat.update(1500)).not.toThrow();
     expect(player.statusEffects.getActiveIds()).toEqual([]);
+  });
+
+  it("calls onAttack with the chosen attack's id when an attack resolves", () => {
+    const enemy = makeEntity(3);
+    const player: CombatEntity = makeEntity(0);
+    const onAttack = vi.fn();
+    const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, {
+      selector: (_enemy, available) => available.find((a) => a.id === "brace") ?? null,
+      onAttack,
+    });
+    combat.update(1500);
+    expect(onAttack).toHaveBeenCalledWith("brace");
+  });
+
+  it("does not call onAttack when the selector returns null", () => {
+    const enemy = makeEntity(3);
+    const player: CombatEntity = makeEntity(0);
+    const onAttack = vi.fn();
+    const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, { selector: () => null, onAttack });
+    combat.update(1500);
+    expect(onAttack).not.toHaveBeenCalled();
+  });
+
+  it("works with no onAttack option provided at all", () => {
+    const enemy = makeEntity(3);
+    const player: CombatEntity = makeEntity(0);
+    const combat = new EnemyCombat(enemy, () => player, OPEN_BLOCKER, {
+      selector: (_enemy, available) => available.find((a) => a.id === "brace") ?? null,
+    });
+    expect(() => combat.update(1500)).not.toThrow();
   });
 
   it("works end-to-end with the default trigger and selector", () => {

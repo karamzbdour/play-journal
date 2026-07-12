@@ -17,6 +17,9 @@ import EnemyCombat from "../combat/EnemyCombat";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
 import { prettifyName } from "@/lib/format";
+import { ClipDef, SpriteManifest } from "../animation/SpriteManifest";
+import { SpriteProvider, LocalSpriteProvider, GENERIC_HUMANOID_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
+import { pickManifest } from "../animation/resolveAnimation";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
@@ -60,6 +63,29 @@ function paintRooms(groundLayer: Phaser.Tilemaps.TilemapLayer, dungeon: Dungeon)
   });
 }
 
+const MANIFEST_FETCH_TIMEOUT_MS = 5000;
+
+// Never lets a slow/hanging SpriteProvider block dungeon creation - a timed-out fetch is treated
+// the same as "sprite id not found" (see pickManifest).
+function fetchManifestWithTimeout(provider: SpriteProvider, spriteId: string): Promise<SpriteManifest | null> {
+  return Promise.race([
+    provider.getManifest(spriteId).catch(() => null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), MANIFEST_FETCH_TIMEOUT_MS)),
+  ]);
+}
+
+function queueManifestTextures(scene: Phaser.Scene, manifest: SpriteManifest, queued: Set<string>) {
+  (Object.values(manifest.clips) as ClipDef[]).forEach((clip) => {
+    if (queued.has(clip.textureKey) || scene.textures.exists(clip.textureKey)) return;
+    queued.add(clip.textureKey);
+    scene.load.spritesheet(clip.textureKey, clip.textureUrl, { frameWidth: clip.frameWidth, frameHeight: clip.frameHeight });
+  });
+}
+
+function manifestHasFailedTexture(manifest: SpriteManifest, failedKeys: Set<string>): boolean {
+  return (Object.values(manifest.clips) as ClipDef[]).some((clip) => failedKeys.has(clip.textureKey));
+}
+
 interface EnemyInstance {
   enemy: Enemy;
   combat: EnemyCombat;
@@ -87,7 +113,42 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       this.load.image("tiles", "/tilesets/buch-tileset-48px.png");
     }
 
-    create() {
+    // Resolves the player/enemy sprite manifests (falling back to the generic manifests on fetch
+    // failure, unknown id, or a texture actually failing to download) and loads every clip's
+    // texture before returning, so by the time this resolves everything needed to build
+    // Player/Enemy's AnimationControllers is already in the texture manager.
+    private async loadEntityManifests(spriteProvider: SpriteProvider): Promise<{ player: SpriteManifest; enemy: SpriteManifest }> {
+      const [playerFetched, enemyFetched] = await Promise.all([
+        fetchManifestWithTimeout(spriteProvider, config.player_sprite),
+        fetchManifestWithTimeout(spriteProvider, config.enemy_type),
+      ]);
+
+      let playerManifest = pickManifest("player", playerFetched);
+      let enemyManifest = pickManifest("enemy", enemyFetched);
+
+      const failedKeys = new Set<string>();
+      this.load.on(PhaserLib.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => failedKeys.add(file.key));
+
+      const queued = new Set<string>();
+      // Always queue the generic manifests too, so there's a guaranteed-loaded fallback even if
+      // a fetched manifest's own texture URLs 404 after the fetch itself succeeded.
+      queueManifestTextures(this, GENERIC_HUMANOID_MANIFEST, queued);
+      queueManifestTextures(this, GENERIC_ENEMY_MANIFEST, queued);
+      queueManifestTextures(this, playerManifest, queued);
+      queueManifestTextures(this, enemyManifest, queued);
+
+      await new Promise<void>((resolve) => {
+        this.load.once(PhaserLib.Loader.Events.COMPLETE, () => resolve());
+        this.load.start();
+      });
+
+      if (manifestHasFailedTexture(playerManifest, failedKeys)) playerManifest = GENERIC_HUMANOID_MANIFEST;
+      if (manifestHasFailedTexture(enemyManifest, failedKeys)) enemyManifest = GENERIC_ENEMY_MANIFEST;
+
+      return { player: playerManifest, enemy: enemyManifest };
+    }
+
+    async create() {
       const dungeon = new Dungeon({
         width: 50,
         height: 50,
@@ -107,7 +168,6 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         height: dungeon.height,
       });
 
-
       const tileset = map.addTilesetImage("tiles", undefined, TILE_SIZE, TILE_SIZE, 0, 0)!;
       this.groundLayer = map.createBlankLayer("Ground", tileset)!;
       // Second layer for items/decorations
@@ -123,11 +183,14 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
+      const spriteProvider = new LocalSpriteProvider();
+      const { player: playerManifest, enemy: enemyManifest } = await this.loadEntityManifests(spriteProvider);
+
       const startRoom = dungeon.rooms[0];
       const playerX = map.tileToWorldX(startRoom.centerX)!;
       const playerY = map.tileToWorldY(startRoom.centerY)!;
       const weapon = generateWeapon(randomWeaponCategory());
-      this.player = new Player(this, playerX, playerY, weapon);
+      this.player = new Player(this, playerX, playerY, weapon, playerManifest);
       this.cameras.main.startFollow(this.player.sprite, true);
 
       this.physics.add.collider(this.player.sprite, this.groundLayer);
@@ -140,8 +203,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       const enemyTileY = dungeon.rooms[1] ? enemyRoom.centerY : Math.min(enemyRoom.bottom - 1, enemyRoom.centerY + 2);
       const enemyX = map.tileToWorldX(enemyTileX)!;
       const enemyY = map.tileToWorldY(enemyTileY)!;
-      // Aggression 3 so the demo reaches all three example attacks (see combat/Attack.ts) over time.
-      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3, 50);
+      // Aggression 3 so the demo reaches all three example attacks (see combat/EnemyAttack.ts) over time.
+      const enemy = new Enemy(this, enemyX, enemyY, config.enemy_color, 3, 50, enemyManifest);
 
       this.playerLabel = new EntityLabel(this, fontFamily, this.player.sprite, {
         name: getDisplayName() ?? "You",
@@ -170,7 +233,9 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       });
       // Player and Enemy implement CombatEntity themselves (live x/y getters),
       // so both combat systems take the entities directly.
-      const enemyCombat = new EnemyCombat(enemy, () => this.player, blocker);
+      const enemyCombat = new EnemyCombat(enemy, () => this.player, blocker, {
+        onAttack: (attackId) => enemy.animationController.play("attack", { abilityId: attackId }),
+      });
       this.enemyInstances = [{ enemy, combat: enemyCombat, label: enemyLabel }];
 
       this.playerCombat = new PlayerCombat(
@@ -178,7 +243,8 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         this.player,
         () => this.enemyInstances.map(({ enemy }) => enemy),
         blocker,
-        new PhaserAttackInput(this)
+        new PhaserAttackInput(this),
+        { onAttack: (attackId) => this.player.animationController.play("attack", { abilityId: attackId }) }
       );
 
       // Full-screen mood tint over the whole level, so the run feels different depending on
@@ -221,6 +287,9 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
     }
 
     update(time: number, delta: number) {
+      // create() resolves sprite manifests asynchronously; guard against Phaser calling update()
+      // on an earlier frame before it has finished.
+      if (!this.player) return;
       if (this.isPlayerDead) return;
 
       this.player.update(delta);

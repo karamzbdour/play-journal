@@ -1,4 +1,4 @@
-import { ATTACKS, AttackDefinition } from "./Attack";
+import { ATTACKS, AttackDefinition } from "./EnemyAttack";
 import { CombatEntity, AggressiveCombatEntity } from "./CombatEntity";
 import { resolveAttackComponents } from "./AttackComponent";
 import CooldownTracker from "./CooldownTracker";
@@ -36,15 +36,17 @@ export default class EnemyCombat {
   private timeSinceLastAttempt = 0;
   private trigger: AttackTrigger;
   private selector: AttackSelector;
+  private onAttack?: (attackId: string) => void;
 
   constructor(
     private enemy: AggressiveCombatEntity,
     private getTarget: () => CombatEntity,
     private blocker: LineOfSightBlocker,
-    options?: { trigger?: AttackTrigger; selector?: AttackSelector }
+    options?: { trigger?: AttackTrigger; selector?: AttackSelector; onAttack?: (attackId: string) => void }
   ) {
     this.trigger = options?.trigger ?? defaultTrigger;
     this.selector = options?.selector ?? defaultSelector;
+    this.onAttack = options?.onAttack;
   }
 
   update(deltaMs: number): void {
@@ -79,5 +81,6 @@ export default class EnemyCombat {
 
     this.cooldowns.start(chosen.id, chosen.cooldownMs);
     resolveAttackComponents(chosen.effects, this.enemy, target, 0);
+    this.onAttack?.(chosen.id);
   }
 }
