@@ -13,8 +13,9 @@ const FRAME_SIZE = 32;
 // sliced_knight/ (row0 - subtle stance, row1 - visible leg/cape motion). Walking left is just
 // the walk clip mirrored at render time (AnimationController's flipX), not separate art. death
 // comes from sliced_knight2/, a second character sheet in the same layout (row6 - lying-down pose).
+// idle is a single still frame (no idle motion in the source sheet worth animating).
 const STATES = {
-  idle: { sourceDir: "sliced_knight", frames: ["sprite_r00_c00.png", "sprite_r00_c01.png"] },
+  idle: { sourceDir: "sliced_knight", frames: ["sprite_r00_c00.png"] },
   walk: {
     sourceDir: "sliced_knight",
     frames: ["sprite_r01_c00.png", "sprite_r01_c02.png", "sprite_r01_c04.png", "sprite_r01_c06.png"],

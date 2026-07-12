@@ -50,7 +50,7 @@ export const GENERIC_ENEMY_MANIFEST: SpriteManifest = buildGenericManifest("gene
 export const SLICED_KNIGHT_MANIFEST: SpriteManifest = {
   spriteId: "sliced_knight",
   clips: {
-    idle: clip("sliced_knight", "idle", { frameCount: 2, frameRate: 4, repeat: -1 }),
+    idle: clip("sliced_knight", "idle", { frameCount: 1, frameRate: 4, repeat: -1 }),
     walk: clip("sliced_knight", "walk", { frameCount: 4, frameRate: 8, repeat: -1 }),
     death: clip("sliced_knight", "death", { frameCount: 4, frameRate: 6, repeat: 0 }),
   },
