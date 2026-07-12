@@ -51,15 +51,15 @@ class GameConfig(BaseModel):
     collectible_type: str
     enemy_type: str
     enemy_color: str = Field(description="Enemy hex color, e.g. #ef4444")
-    enemy_spawn_rate: int = Field(ge=500, le=3000, description="Spawn interval in milliseconds")
+    spawn_rate: int = Field(ge=500, le=3000, description="Spawn interval in milliseconds")
     win_score: int = Field(ge=3, le=20, description="Items needed to win the game")
     mood: str
-    game_rules: str
+    game_rules: List[str]
     levels : int
     bosses : List[str]
     weapon : str
     theme_song : str
-    length : int = Field(ge=1, le=10, description="Length of the game in minutes")
+    length_of_day : int = Field(ge=1, le=10, description="Length of the game in minutes")
     asset_urls: List[AssetSelection] = Field(default=[], description="List of public URLs of game assets selected for the game matching the journal theme")
 
     @field_validator("background_color", "enemy_color")
