@@ -52,7 +52,7 @@ export default function AccountPage() {
             className="text-3xl font-extrabold uppercase tracking-widest"
             style={{ 
               color: "var(--torch)", 
-              textShadow: "0 0 15px rgba(251,191,36,0.3)" 
+              textShadow: "0 0 15px rgba(251, 191, 36, 0.3)" 
             }}
           >
             Hero Profile
