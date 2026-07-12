@@ -1,6 +1,7 @@
 import React from "react";
 import { Spread } from "./Book";
-import { PageNo, formatDate } from "./chrome";
+import { PageNo } from "./chrome";
+import { formatDate } from "@/lib/format";
 
 interface TodaySpreadProps {
   spreadIndex: number;

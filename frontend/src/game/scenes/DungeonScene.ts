@@ -16,14 +16,7 @@ import { getDisplayName } from "@/lib/auth";
 import EnemyCombat, { CombatEntity, AggressiveCombatEntity } from "../combat/EnemyCombat";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
-
-// "deadline_demon" -> "Deadline Demon"
-function prettifyName(slug: string): string {
-  return slug
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+import { prettifyName } from "@/lib/format";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {

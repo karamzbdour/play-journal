@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { MemoryEntry, loadMemories } from "@/lib/journal";
+import { formatDate } from "@/lib/format";
 
 export default function JournalPage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function JournalPage() {
               >
                 <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider" style={{ color: "#8a7550" }}>
                   <span>Day #{index + 1}</span>
-                  <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
+                  <span>{formatDate(entry.date)}</span>
                 </div>
                 <p className="text-sm italic" style={{ color: "#d9c69e", fontFamily: "var(--font-sans)" }}>
                   "{entry.text}"

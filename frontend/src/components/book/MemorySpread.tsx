@@ -2,7 +2,8 @@ import React from "react";
 import { MemoryEntry } from "@/lib/journal";
 import { getPalette } from "@/lib/theme";
 import { Spread } from "./Book";
-import { PageNo, formatDate, prettifyName } from "./chrome";
+import { PageNo } from "./chrome";
+import { formatDate, prettifyName } from "@/lib/format";
 
 // Same clamp DungeonScene uses for maxRooms, so the card's "depth" matches
 // what the player actually walks through when they relive the memory.
