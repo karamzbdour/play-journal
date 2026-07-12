@@ -15,6 +15,16 @@ Play-Journal is an interactive diary app that turns your daily entries into cust
 
 ---
 
+## Gallery
+
+<div align="center">
+  <img src="frontend/public/image_1.png" alt="Book Cover and Interface" width="800" style="margin-bottom: 20px;" />
+  <img src="frontend/public/image_2.png" alt="Dynamic Journal Entry Input" width="800" style="margin-bottom: 20px;" />
+  <img src="frontend/public/image_3.png" alt="Playable Dungeon Gameplay Screen" width="800" />
+</div>
+
+---
+
 ## Technical Implementation Details
 
 - **FastAPI & Gemini AI Pipeline:** Processes journal entries using the modern `google-genai` SDK with Structured Outputs to parse logs into type-validated `GameConfig` parameters.
