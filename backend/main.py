@@ -37,6 +37,10 @@ app.add_middleware(
 class JournalEntry(BaseModel):
     text: str
 
+class AssetSelection(BaseModel):
+    type: str = Field(description="The asset type key, e.g. weapon, enemy, collectible, boss, pickup_item, projectile")
+    url: str = Field(description="The public storage URL of the selected asset")
+
 class GameConfig(BaseModel):
     theme_id: str
     theme_name: str
@@ -55,6 +59,7 @@ class GameConfig(BaseModel):
     weapon : str
     theme_song : str
     length : int = Field(ge=1, le=10, description="Length of the game in minutes")
+    asset_urls: List[AssetSelection] = Field(default=[], description="List of public URLs of game assets selected for the game matching the journal theme")
 
     @field_validator("background_color", "enemy_color")
     @classmethod
@@ -170,9 +175,29 @@ def generate_game(entry: JournalEntry, current_user: dict = Depends(get_current_
     if not journal_text:
         raise HTTPException(status_code=400, detail="Journal entry text cannot be empty.")
 
-    # Construct the prompt instructing Gemini on how to map the journal log to game parameters
+    # Fetch available assets from database
+    try:
+        supabase_client = get_supabase_client()
+        assets_res = supabase_client.table("game_assets").select("name, description, storage_path, type, tags").execute()
+        db_assets = assets_res.data or []
+    except Exception as e:
+        # Fallback to empty if DB query fails
+        db_assets = []
+
+    assets_summary = "\n".join([
+        f"- Type: {a['type']}, Name: {a['name']}, URL: {a['storage_path']}, Description: {a['description']}, Tags: {a['tags']}"
+        for a in db_assets
+    ])
+
+    # Construct the prompt instructing Gemini on how to map the journal log to game parameters and choose matching assets
     prompt = f"""Analyse the following user's journal entry and translate it into a custom game configurations JSON:
-"{journal_text}"""
+"{journal_text}"
+
+Available Game Assets:
+{assets_summary}
+
+Task: Choose exactly one asset from the available assets for each of the types that fit the theme (e.g. a matching weapon, enemy, collectible). List these in 'asset_urls' matching the type and its public URL. If no matching asset is found in the list for a type, do not include it. Make sure to mix and match them creatively to match the mood of the entry.
+"""
 
     try:
         # Call Gemini using Structured Outputs

@@ -8,7 +8,7 @@ import { hexToNumber } from "@/lib/color";
 // plain circle in place of a sprite/atlas. Exists mainly to prove the nameplate and combat
 // systems work on a non-player entity; real enemy movement/AI is a separate feature.
 export default class Enemy implements AggressiveCombatEntity {
-  public sprite: Phaser.GameObjects.Arc;
+  public sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Arc;
   public statusEffects: StatusEffectController = new StatusEffectController();
   public health: Health;
   public aggressionLevel: number;
@@ -23,7 +23,12 @@ export default class Enemy implements AggressiveCombatEntity {
   }
 
   constructor(scene: Phaser.Scene, x: number, y: number, color: string, aggressionLevel: number, maxHp: number) {
-    this.sprite = scene.add.circle(x, y, 8, hexToNumber(color));
+    if (scene.textures.exists("enemy")) {
+      this.sprite = scene.add.sprite(x, y, "enemy");
+      this.sprite.setDisplaySize(24, 24);
+    } else {
+      this.sprite = scene.add.circle(x, y, 8, hexToNumber(color));
+    }
     this.aggressionLevel = aggressionLevel;
     this.health = new Health(maxHp);
   }
