@@ -22,9 +22,7 @@ export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Input and API states
-  const [journalText, setJournalText] = useState(
-    "Had an extremely productive day at the office. Handled code deployments, fixed several compilation bugs in our pipeline, and drank a lot of coffee to stay alert. Feeling proud!"
-  );
+  const [journalText, setJournalText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fallingAsleep, setFallingAsleep] = useState(false);
