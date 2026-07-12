@@ -20,9 +20,10 @@ import { pickManifest } from "../animation/resolveAnimation";
 import { DungeonRoom } from "../dungeon/DungeonRoom";
 import RoomEncounter from "../dungeon/RoomEncounter";
 import EnemySpawner, { SpawnedEnemy } from "../dungeon/EnemySpawner";
-import { spawnBossRoom } from "../dungeon/roomSpawnStrategies";
+import { spawnBossRoom, spawnSwarmRoom } from "../dungeon/roomSpawnStrategies";
 import assignRoomKinds from "../dungeon/assignRoomKinds";
 import buildRoomDoors from "../dungeon/buildRoomDoors";
+import placeRoomStructures from "../dungeon/placeRoomStructures";
 import Door from "../dungeon/Door";
 import TutorialBanner from "../ui/TutorialBanner";
 
@@ -36,6 +37,12 @@ function getRoomCount(lengthOfDay: number): number {
 // encounters instead of always just one regardless of size.
 function getBossRoomCount(totalRooms: number): number {
   return Math.max(1, Math.floor(totalRooms / 5));
+}
+
+// Swarm rooms are a bit more common than boss rooms - lighter encounters that pad out the run
+// without every special room being a boss fight.
+function getSwarmRoomCount(totalRooms: number): number {
+  return Math.max(1, Math.floor(totalRooms / 4));
 }
 
 // Paints every generated room onto the ground layer: floor, corners, walls,
@@ -232,12 +239,18 @@ export function createDungeonScene(
       const finalRoom = dungeon.rooms[dungeon.rooms.length - 1];
       this.stairsPosition = placeStairs(map, this.stuffLayer, finalRoom);
 
-      // Special rooms (currently just "boss") are assigned strictly between the start and end
-      // rooms, so the player can neither spawn in one nor find the stairs sealed inside one -
-      // see assignRoomKinds and EnemySpawner for the door-sealing logic. Dungeons that generate
-      // too few rooms for a valid middle choice simply get fewer (or zero) special rooms.
+      // Solid cover structures in every room except the start room (a clean spawn) and the
+      // stairs room (keeps the exit approach clear). Placed before enemies spawn so swarm spawn
+      // picks can see (and avoid) the occupied tiles.
+      placeRoomStructures(this.stuffLayer, dungeon.rooms.slice(1, -1));
+
+      // Special rooms are assigned strictly between the start and end rooms, so the player can
+      // neither spawn in one nor find the stairs sealed inside one - see assignRoomKinds and
+      // EnemySpawner for the door-sealing logic. Dungeons that generate too few rooms for a
+      // valid middle choice simply get fewer (or zero) special rooms.
       const roomKindAssignments = assignRoomKinds(dungeon.rooms, [
         { kind: "boss", count: getBossRoomCount(dungeon.rooms.length) },
+        { kind: "swarm", count: getSwarmRoomCount(dungeon.rooms.length) },
       ]);
 
       this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -279,6 +292,7 @@ export function createDungeonScene(
       // systems take the entities directly.
       const spawner = new EnemySpawner();
       spawner.register("boss", spawnBossRoom);
+      spawner.register("swarm", spawnSwarmRoom);
       const spawnResults = spawner.spawnAll(dungeon.rooms, roomKindAssignments, this.stuffLayer, {
         scene: this,
         map,
@@ -291,6 +305,19 @@ export function createDungeonScene(
       });
       this.enemyInstances = spawnResults.flatMap((result) => result.spawned);
       this.roomEncounters = spawnResults.map((result) => result.encounter);
+
+      // Enemies collide with the same layers as the player (walls, structures, closed doors) and
+      // each other, so a chasing swarm crowds around cover instead of stacking into a single
+      // sprite - but not with the player itself, so a chasing enemy never physically blocks or
+      // shoves the player around; combat (PlayerCombat/EnemyCombat) is what makes contact matter.
+      const enemySprites = this.enemyInstances.map(({ enemy }) => enemy.sprite);
+      enemySprites.forEach((sprite) => {
+        this.physics.add.collider(sprite, this.groundLayer);
+        this.physics.add.collider(sprite, this.stuffLayer);
+      });
+      if (enemySprites.length > 0) {
+        this.physics.add.collider(enemySprites, enemySprites);
+      }
 
       // The stairs room's own doors (distinct from a boss room's - those seal shut once the
       // player steps in and only reopen once that room's own enemies die, via RoomEncounter).
@@ -373,6 +400,9 @@ export function createDungeonScene(
       if (this.isPlayerDead || this.isLevelComplete) return;
 
       this.player.update(delta);
+      // AI first so each enemy's update() sees the velocity chosen this frame when deriving its
+      // animation state.
+      this.enemyInstances.forEach(({ ai }) => ai.update(delta));
       this.enemyInstances.forEach(({ enemy }) => enemy.update(delta));
       this.enemyInstances.forEach(({ combat }) => combat.update(delta));
       this.playerCombat.update(delta);
@@ -428,6 +458,7 @@ export function createDungeonScene(
     private handlePlayerDeath() {
       this.isPlayerDead = true;
       this.player.stop();
+      this.enemyInstances.forEach(({ enemy }) => enemy.stop());
       this.add
         .text(this.scale.width / 2, this.scale.height / 2, "YOU DIED", {
           fontFamily,
@@ -443,6 +474,7 @@ export function createDungeonScene(
     private handleLevelComplete() {
       this.isLevelComplete = true;
       this.player.stop();
+      this.enemyInstances.forEach(({ enemy }) => enemy.stop());
       this.add
         .text(this.scale.width / 2, this.scale.height / 2, "LEVEL COMPLETE", {
           fontFamily,

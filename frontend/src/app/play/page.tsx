@@ -20,11 +20,17 @@ const GameComponent = dynamic(() => import("../../components/GameComponent"), {
   ),
 });
 
+// How long the exit overlay takes to fade the game to black before actually navigating back to
+// the journal. Must match the Tailwind duration class on the overlay div below.
+const EXIT_FADE_MS = 500;
+
 export default function PlayPage() {
   const router = useRouter();
   const [gameConfig, setGameConfigState] = useState<GameConfig | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load the config handed off from the journal page; bounce back if there isn't one
   useEffect(() => {
@@ -53,10 +59,22 @@ export default function PlayPage() {
     };
   }, [gameConfig]);
 
+  // Fade the whole game view to black first, then navigate - covers both the Back button and
+  // level completion, so leaving the game never hard-cuts back to the book.
   const handleBackToJournal = () => {
-    clearGameConfig();
-    router.push("/");
+    if (exitTimerRef.current) return; // already fading out
+    setIsExiting(true);
+    exitTimerRef.current = setTimeout(() => {
+      clearGameConfig();
+      router.push("/");
+    }, EXIT_FADE_MS);
   };
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    };
+  }, []);
 
   if (!checkedStorage) {
     return (
@@ -85,6 +103,15 @@ export default function PlayPage() {
       <div className="w-full h-full">
         <GameComponent config={gameConfig} onLevelComplete={handleBackToJournal} />
       </div>
+
+      {/* Exit fade: sits above everything and fades in to black before navigating back to the
+          journal. pointer-events only while exiting, so it also swallows stray clicks mid-fade. */}
+      <div
+        aria-hidden
+        className={`absolute inset-0 z-20 bg-slate-950 transition-opacity duration-500 ease-out ${
+          isExiting ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      />
     </div>
   );
 }
