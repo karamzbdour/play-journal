@@ -19,7 +19,7 @@ export const mockGameConfig: GameConfig = {
     "Survive all levels and defeat the final boss to deploy your build!",
   ],
   levels: 3,
-  bosses: ["The Merge Conflict"],
+  bosses: ["The Merge Conflict", "Big John"],
   weapon: "mechanical_keyboard",
   theme_song: "lofi_deploy_beats.mp3",
   length_of_day: 8,

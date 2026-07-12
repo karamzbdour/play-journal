@@ -22,6 +22,8 @@ import RoomEncounter from "../dungeon/RoomEncounter";
 import EnemySpawner, { SpawnedEnemy } from "../dungeon/EnemySpawner";
 import { spawnBossRoom } from "../dungeon/roomSpawnStrategies";
 import assignRoomKinds from "../dungeon/assignRoomKinds";
+import buildRoomDoors from "../dungeon/buildRoomDoors";
+import Door from "../dungeon/Door";
 
 // Room count scales length_of_day (Min: 5, Max: 10)
 function getRoomCount(lengthOfDay: number): number {
@@ -127,6 +129,8 @@ export function createDungeonScene(
     private groundLayer!: Phaser.Tilemaps.TilemapLayer;
     private stuffLayer!: Phaser.Tilemaps.TilemapLayer;
     private roomEncounters: RoomEncounter[] = [];
+    private finalRoomDoors: Door[] = [];
+    private bossEncounters: RoomEncounter[] = [];
     private moodOverlay!: Phaser.GameObjects.Rectangle;
     private vignette?: Phaser.GameObjects.Image;
     private rainSpawnZone?: { x: number; y: number; width: number; height: number; getRandomPoint(p: { x: number; y: number }): void };
@@ -278,6 +282,17 @@ export function createDungeonScene(
       this.enemyInstances = spawnResults.flatMap((result) => result.spawned);
       this.roomEncounters = spawnResults.map((result) => result.encounter);
 
+      // The stairs room's own doors (distinct from a boss room's - those seal shut once the
+      // player steps in and only reopen once that room's own enemies die, via RoomEncounter).
+      // These start closed, the same closed-door tiles boss rooms use, and stay that way for the
+      // whole level regardless of the player's position, until every boss in the dungeon is dead -
+      // simply gating progress, not a trap the player can trigger.
+      this.bossEncounters = spawnResults.filter((result) => result.kind === "boss").map((result) => result.encounter);
+      this.finalRoomDoors = buildRoomDoors(this.stuffLayer, finalRoom);
+      if (this.bossEncounters.length > 0) {
+        this.finalRoomDoors.forEach((door) => door.close());
+      }
+
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
         this.player,
@@ -345,6 +360,12 @@ export function createDungeonScene(
       const playerTileX = this.map.worldToTileX(this.player.x)!;
       const playerTileY = this.map.worldToTileY(this.player.y)!;
       this.roomEncounters.forEach((encounter) => encounter.update(playerTileX, playerTileY));
+
+      // door.open() no-ops once already open, so it's fine to keep checking every frame rather
+      // than tracking a separate "already opened" flag.
+      if (this.bossEncounters.every((encounter) => encounter.isCleared)) {
+        this.finalRoomDoors.forEach((door) => door.open());
+      }
 
       if (this.rainSpawnZone) {
         rainFollowCamera(this, this.rainSpawnZone);

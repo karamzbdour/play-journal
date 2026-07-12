@@ -32,6 +32,14 @@ export default class AnimationController {
     const requestedKey: ManifestKey = options?.abilityId ? `attack:${options.abilityId}` : state;
     const clip = resolveClip(this.manifest, requestedKey);
 
+    // hit/attack are always authored with repeat: 0 (one-shot). If resolveClip had to fall back
+    // to a looping walk/idle clip because this manifest has no dedicated art for `state` (e.g.
+    // sliced_knight has no hit/attack clips), there's nothing to actually show for it - leave the
+    // sprite playing whatever it already was rather than switching to a clip with no way back
+    // (its animationcomplete never fires, since it loops forever), which would otherwise strand
+    // the controller in `state` and block walk/idle from ever taking back over.
+    if ((state === "hit" || state === "attack") && clip.repeat !== 0) return;
+
     this.currentState = state;
     this.sprite.play(clip.textureKey);
 
