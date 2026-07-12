@@ -1,3 +1,8 @@
+export interface AssetSelection {
+  type: string;
+  url: string;
+}
+
 export interface GameConfig {
   length_of_day: number; // 1 - 10
   theme_song: string;
@@ -16,4 +21,5 @@ export interface GameConfig {
   theme_id: string; // * necessarry?
   weapon: string; // * unless we store a player's weapon persistently in the database
   background_color: string; // * mood based backgrounds currently used
+  asset_urls?: AssetSelection[];
 }

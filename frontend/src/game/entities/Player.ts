@@ -12,7 +12,7 @@ const PLAYER_SPEED = 350;
 const PLAYER_MAX_HP = 100;
 
 export default class Player implements CombatEntity {
-  public sprite: Phaser.GameObjects.Arc;
+  public sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Arc;
   public statusEffects: StatusEffectController = new StatusEffectController();
   public health: Health = new Health(PLAYER_MAX_HP);
   public weapon: Weapon;
@@ -29,7 +29,12 @@ export default class Player implements CombatEntity {
 
   constructor(scene: Phaser.Scene, x: number, y: number, weapon: Weapon) {
     this.weapon = weapon;
-    this.sprite = scene.add.circle(x, y, 8, 0xfacc15);
+    if (scene.textures.exists("weapon")) {
+      this.sprite = scene.add.sprite(x, y, "weapon");
+      this.sprite.setDisplaySize(24, 24);
+    } else {
+      this.sprite = scene.add.circle(x, y, 8, 0xfacc15);
+    }
     scene.physics.add.existing(this.sprite);
     (this.sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
