@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import { STATUS_EFFECTS } from "../combat/StatusEffect";
+import { hexToNumber } from "@/lib/color";
 
 export interface NamePlateTarget {
   x: number;
@@ -138,7 +139,7 @@ export default class EntityLabel {
       this.badgeTexts.set(id, text);
 
       const bar = this.scene.add
-        .rectangle(this.target.x, this.target.y, BAR_WIDTH, BAR_HEIGHT, parseInt(def.color.replace("#", ""), 16))
+        .rectangle(this.target.x, this.target.y, BAR_WIDTH, BAR_HEIGHT, hexToNumber(def.color))
         .setOrigin(0, 0.5);
       this.badgeBars.set(id, bar);
     }

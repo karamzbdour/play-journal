@@ -14,7 +14,6 @@ import EntityLabel from "../ui/EntityLabel";
 import { loadSettings, subscribeSettings } from "../settings";
 import { getDisplayName } from "@/lib/auth";
 import EnemyCombat from "../combat/EnemyCombat";
-import { CombatEntity, AggressiveCombatEntity } from "../combat/CombatEntity";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
 import { prettifyName } from "@/lib/format";
@@ -152,13 +151,6 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
       this.events.once(PhaserLib.Scenes.Events.SHUTDOWN, unsubscribeSettings);
       this.events.once(PhaserLib.Scenes.Events.DESTROY, unsubscribeSettings);
 
-      const getPlayerTarget = (): CombatEntity => ({
-        x: this.player.sprite.x,
-        y: this.player.sprite.y,
-        statusEffects: this.player.statusEffects,
-        health: this.player.health,
-      });
-
       // Reuses the same .collides flag Phaser already computed for player-movement collision
       // (via setCollisionByExclusion above), so line-of-sight blocking always matches what
       // actually blocks movement.
@@ -172,42 +164,15 @@ export function createDungeonScene(PhaserLib: typeof Phaser, config: GameConfig,
         statusEffects: enemy.statusEffects,
         health: enemy.health,
       });
-      const enemyCombatEntity: AggressiveCombatEntity = {
-        get x() {
-          return enemy.sprite.x;
-        },
-        get y() {
-          return enemy.sprite.y;
-        },
-        statusEffects: enemy.statusEffects,
-        health: enemy.health,
-        aggressionLevel: enemy.aggressionLevel,
-      };
-      const enemyCombat = new EnemyCombat(enemyCombatEntity, getPlayerTarget, blocker);
+      // Player and Enemy implement CombatEntity themselves (live x/y getters),
+      // so both combat systems take the entities directly.
+      const enemyCombat = new EnemyCombat(enemy, () => this.player, blocker);
       this.enemyInstances = [{ enemy, combat: enemyCombat, label: enemyLabel }];
 
-      const self = this;
-      const playerSelf: CombatEntity = {
-        get x() {
-          return self.player.sprite.x;
-        },
-        get y() {
-          return self.player.sprite.y;
-        },
-        statusEffects: this.player.statusEffects,
-        health: this.player.health,
-      };
-      const getEnemyTargets = (): CombatEntity[] =>
-        this.enemyInstances.map(({ enemy }) => ({
-          x: enemy.sprite.x,
-          y: enemy.sprite.y,
-          statusEffects: enemy.statusEffects,
-          health: enemy.health,
-        }));
       this.playerCombat = new PlayerCombat(
         this.player.weapon,
-        playerSelf,
-        getEnemyTargets,
+        this.player,
+        () => this.enemyInstances.map(({ enemy }) => enemy),
         blocker,
         new PhaserAttackInput(this)
       );
