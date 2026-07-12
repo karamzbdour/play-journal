@@ -116,7 +116,6 @@ export function createDungeonScene(
   PhaserLib: typeof Phaser,
   config: GameConfig,
   fontFamily: string,
-  handFontFamily: string,
   onLevelComplete: () => void
 ) {
   return class DungeonScene extends PhaserLib.Scene {
@@ -347,14 +346,9 @@ export function createDungeonScene(
       // (see the update() gate below) until the player has stepped through every line, so SPACE
       // advancing text can never also fire the player's SPACE-triggered basic attack.
       if (config.game_rules.length > 0) {
-        this.tutorialBanner = new TutorialBanner(
-          this,
-          { heading: fontFamily, hand: handFontFamily },
-          config.game_rules,
-          () => {
-            this.tutorialBanner = undefined;
-          }
-        );
+        this.tutorialBanner = new TutorialBanner(this, fontFamily, config.game_rules, () => {
+          this.tutorialBanner = undefined;
+        });
       }
     }
 

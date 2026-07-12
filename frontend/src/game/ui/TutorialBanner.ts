@@ -1,10 +1,5 @@
 import type Phaser from "phaser";
 
-export interface TutorialFonts {
-  heading: string; // pixel/chrome font (Silkscreen) - matches .tome-eyebrow
-  hand: string; // handwriting font (Caveat) - matches .tome-hand / the journal's written pages
-}
-
 const MARGIN_X = 32;
 const MARGIN_BOTTOM = 28;
 const MAX_WIDTH = 720;
@@ -16,13 +11,12 @@ const EYEBROW_ROW_HEIGHT = 22;
 const BORDER_WIDTH = 6;
 const DEPTH = 1000;
 
-// Colors lifted from globals.css's --parchment/--leather/--ink/--torch tome palette, so the
-// in-game banner reads as the same object as the journal chrome around it.
+// Colors lifted from globals.css's --parchment/--leather/--ink tome palette, so the in-game
+// banner reads as the same object as the journal chrome around it.
 const COLOR_PARCHMENT_DEEP = 0xd9c69e;
 const COLOR_LEATHER = 0x2c1a10;
 const COLOR_INK = "#2e2418";
 const COLOR_INK_FADED = "#6b5a41";
-const COLOR_TORCH = "#fbbf24";
 
 // Parchment-and-leather dialogue banner pinned to the bottom of the screen. Displays `lines` one
 // at a time; SPACE advances to the next, and calls onComplete once the player advances past the
@@ -43,7 +37,7 @@ export default class TutorialBanner {
 
   constructor(
     private scene: Phaser.Scene,
-    private fonts: TutorialFonts,
+    private fontFamily: string,
     private lines: readonly string[],
     private onComplete?: () => void
   ) {
@@ -51,17 +45,19 @@ export default class TutorialBanner {
     this.panel = scene.add.rectangle(0, 0, 10, 10, COLOR_PARCHMENT_DEEP).setScrollFactor(0).setDepth(DEPTH + 1);
 
     this.eyebrow = scene.add
-      .text(0, 0, "TUTORIAL", { fontFamily: fonts.heading, fontSize: "11px", color: COLOR_INK_FADED })
+      .text(0, 0, "TUTORIAL", { fontFamily, fontSize: "11px", color: COLOR_INK_FADED })
       .setScrollFactor(0)
       .setDepth(DEPTH + 2);
 
+    // Same blocky pixel font as entity nametags (EntityLabel), not the journal's cursive hand -
+    // legibility matters more here than matching the written-page look.
     this.body = scene.add
-      .text(0, 0, "", { fontFamily: fonts.hand, fontSize: "22px", color: COLOR_INK })
+      .text(0, 0, "", { fontFamily, fontSize: "16px", color: COLOR_INK, lineSpacing: 6 })
       .setScrollFactor(0)
       .setDepth(DEPTH + 2);
 
     this.prompt = scene.add
-      .text(0, 0, "", { fontFamily: fonts.heading, fontSize: "11px", color: COLOR_TORCH })
+      .text(0, 0, "", { fontFamily, fontSize: "11px", color: COLOR_INK })
       .setOrigin(1, 1)
       .setScrollFactor(0)
       .setDepth(DEPTH + 2);
