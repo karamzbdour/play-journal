@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated, getUser, clearAuthToken } from "@/lib/auth";
+import { isAuthenticated, getUser, clearAuthToken, StoredUser } from "@/lib/auth";
 import { loadMemories } from "@/lib/journal";
 
 export default function AccountPage() {
   const router = useRouter();
-  const [user, setLocalUser] = useState<any>(null);
+  const [user, setLocalUser] = useState<StoredUser | null>(null);
   const [stats, setStats] = useState({ totalJournals: 0 });
 
   useEffect(() => {

@@ -66,7 +66,7 @@ export default function JournalPage() {
                   <span>{formatDate(entry.date)}</span>
                 </div>
                 <p className="text-sm italic" style={{ color: "#d9c69e", fontFamily: "var(--font-sans)" }}>
-                  "{entry.text}"
+                  &ldquo;{entry.text}&rdquo;
                 </p>
                 <div className="flex gap-2 items-center text-xs">
                   <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold" style={{ background: "#2e1a0c", color: "var(--torch)" }}>

@@ -19,12 +19,21 @@ export function clearAuthToken() {
   localStorage.removeItem(USER_KEY);
 }
 
-export function setUser(user: any) {
+// The Supabase user object the backend hands back at login - typed with just
+// the fields the UI actually reads.
+export interface StoredUser {
+  id?: string;
+  email?: string;
+  full_name?: string;
+  user_metadata?: { full_name?: string };
+}
+
+export function setUser(user: StoredUser) {
   if (typeof window === "undefined") return;
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
-export function getUser(): any | null {
+export function getUser(): StoredUser | null {
   if (typeof window === "undefined") return null;
   const user = localStorage.getItem(USER_KEY);
   return user ? JSON.parse(user) : null;
@@ -35,11 +44,7 @@ export function getUser(): any | null {
 export function getDisplayName(): string | null {
   const user = getUser();
   if (!user) return null;
-  return (
-    user.user_metadata?.full_name ||
-    user.full_name ||
-    (typeof user.email === "string" ? user.email.split("@")[0] : null)
-  );
+  return user.user_metadata?.full_name || user.full_name || user.email?.split("@")[0] || null;
 }
 
 export function isAuthenticated(): boolean {

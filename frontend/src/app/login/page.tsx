@@ -51,7 +51,7 @@ export default function LoginPage() {
         let errorDetail = data.detail;
         if (Array.isArray(errorDetail)) {
           // Pydantic validation list format
-          errorDetail = errorDetail.map((err: any) => err.msg).join(", ");
+          errorDetail = errorDetail.map((err: { msg: string }) => err.msg).join(", ");
         }
         throw new Error(errorDetail || "Authentication failed.");
       }
@@ -81,9 +81,9 @@ export default function LoginPage() {
         setUser(data.user);
         router.push("/");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Something went wrong.");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }

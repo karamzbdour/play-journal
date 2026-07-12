@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeSettings, DEFAULT_SETTINGS } from "./settings";
+import { sanitizeSettings, DEFAULT_SETTINGS } from "@/game/settings";
 
 describe("sanitizeSettings", () => {
   it("returns defaults for missing or malformed input", () => {
