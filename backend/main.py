@@ -191,6 +191,7 @@ def generate_game(entry: JournalEntry, current_user: dict = Depends(get_current_
         db_assets = cast(List[dict], assets_res.data or [])
     except Exception as e:
         # Fallback to empty if DB query fails
+        print(f"Failed to fetch game_assets, continuing with no assets: {e}")
         db_assets = []
 
     assets_summary = "\n".join([
@@ -227,6 +228,8 @@ Task: Choose exactly one asset from the available assets for each of the types t
         # Verify response text is present
         if not response.text:
             raise ValueError("Empty response received from the Gemini API model.")
+
+        print(f"Gemini response JSON:\n{response.text}")
 
         # Parse and validate the response against the Pydantic schema
         game_config = GameConfig.model_validate_json(response.text)

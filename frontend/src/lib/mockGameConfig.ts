@@ -1,4 +1,9 @@
-import { GameConfig } from "@/types/game";
+import { AssetSelection, GameConfig } from "@/types/game";
+
+const MOCK_ASSET_URLS: AssetSelection[] = [
+  { type: "enemy", url: "https://oiewexydmyhcbdejhgyf.supabase.co/storage/v1/object/public/sprites/enemy/1df50240-a879-498c-ac89-532874a57a0d.webp" },
+  { type: "boss", url: "https://oiewexydmyhcbdejhgyf.supabase.co/storage/v1/object/public/sprites/boss/fa6db780-2fba-441b-8062-56540b6789bc.webp" },
+];
 
 export const mockGameConfig: GameConfig = {
   theme_id: "coder_coffee",
@@ -23,4 +28,5 @@ export const mockGameConfig: GameConfig = {
   weapon: "mechanical_keyboard",
   theme_song: "lofi_deploy_beats.mp3",
   length_of_day: 8,
+  asset_urls: MOCK_ASSET_URLS,
 };
