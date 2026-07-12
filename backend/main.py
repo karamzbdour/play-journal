@@ -2,7 +2,7 @@ import asyncio
 import os
 import random
 import re
-from typing import List
+from typing import List, cast
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,10 +93,13 @@ def signup(user_data: UserSignUp):
         if user_data.full_name:
             options["data"] = {"full_name": user_data.full_name}
 
-        credentials = SignUpWithEmailAndPasswordCredentials(
-            email=user_data.email,
-            password=user_data.password,
-            options=options
+        credentials = cast(
+            SignUpWithEmailAndPasswordCredentials,
+            {
+                "email": user_data.email,
+                "password": user_data.password,
+                "options": options
+            }
         )
         response = supabase_client.auth.sign_up(credentials)
         
@@ -122,9 +125,12 @@ def login(user_data: UserSignIn):
     """
     supabase_client = get_supabase_client()
     try:
-        credentials = SignInWithEmailAndPasswordCredentials(
-            email=user_data.email,
-            password=user_data.password
+        credentials = cast(
+            SignInWithEmailAndPasswordCredentials,
+            {
+                "email": user_data.email,
+                "password": user_data.password
+            }
         )
         response = supabase_client.auth.sign_in_with_password(credentials)
         
