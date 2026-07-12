@@ -5,6 +5,11 @@ export interface SpriteProvider {
   getManifest(spriteId: string): Promise<SpriteManifest | null>;
 }
 
+// Sentinel spriteId for boss lookups - doesn't match any real player/enemy sprite id, so
+// LocalSpriteProvider can tell "give me the boss-flavored pick" apart from the regular enemy
+// lookup (which prefers type "enemy") without changing the SpriteProvider interface.
+export const BOSS_SPRITE_ID = "__boss__";
+
 function clip(spriteId: string, state: AnimationState, opts: { frameCount: number; frameRate: number; repeat: number }): ClipDef {
   return {
     textureKey: `${spriteId}_${state}`,
@@ -80,9 +85,12 @@ export class LocalSpriteProvider implements SpriteProvider {
   async getManifest(spriteId: string): Promise<SpriteManifest | null> {
     if (this.assetUrls && Array.isArray(this.assetUrls)) {
       const isPlayer = spriteId === "sliced_knight" || spriteId === "generic_humanoid";
-      const customAsset = isPlayer 
+      const isBoss = spriteId === BOSS_SPRITE_ID;
+      const customAsset = isPlayer
         ? (this.assetUrls.find((a) => a.type === "weapon") || this.assetUrls.find((a) => a.type === "player"))
-        : (this.assetUrls.find((a) => a.type === "enemy") || this.assetUrls.find((a) => a.type === "boss"));
+        : isBoss
+          ? (this.assetUrls.find((a) => a.type === "boss") || this.assetUrls.find((a) => a.type === "enemy"))
+          : (this.assetUrls.find((a) => a.type === "enemy") || this.assetUrls.find((a) => a.type === "boss"));
 
       if (customAsset) {
         return {

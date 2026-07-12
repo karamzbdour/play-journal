@@ -15,7 +15,7 @@ import { getDisplayName } from "@/lib/auth";
 import PlayerCombat, { PhaserAttackInput } from "../combat/PlayerCombat";
 import { LineOfSightBlocker } from "../combat/lineOfSight";
 import { ClipDef, SpriteManifest } from "../animation/SpriteManifest";
-import { SpriteProvider, LocalSpriteProvider, SLICED_KNIGHT_MANIFEST, GENERIC_ENEMY_MANIFEST } from "../animation/SpriteProvider";
+import { SpriteProvider, LocalSpriteProvider, SLICED_KNIGHT_MANIFEST, GENERIC_ENEMY_MANIFEST, BOSS_SPRITE_ID } from "../animation/SpriteProvider";
 import { pickManifest } from "../animation/resolveAnimation";
 import { DungeonRoom } from "../dungeon/DungeonRoom";
 import RoomEncounter from "../dungeon/RoomEncounter";
@@ -150,14 +150,19 @@ export function createDungeonScene(
     // actually failing to download) and loads every clip's texture before returning, so by the
     // time this resolves everything needed to build Player/Enemy's AnimationControllers is
     // already in the texture manager.
-    private async loadEntityManifests(spriteProvider: SpriteProvider): Promise<{ player: SpriteManifest; enemy: SpriteManifest }> {
-      const [playerFetched, enemyFetched] = await Promise.all([
+    private async loadEntityManifests(spriteProvider: SpriteProvider): Promise<{ player: SpriteManifest; enemy: SpriteManifest; boss: SpriteManifest }> {
+      const [playerFetched, enemyFetched, bossFetched] = await Promise.all([
         fetchManifestWithTimeout(spriteProvider, config.player_sprite),
         fetchManifestWithTimeout(spriteProvider, config.enemy_type),
+        fetchManifestWithTimeout(spriteProvider, BOSS_SPRITE_ID),
       ]);
 
       let playerManifest = pickManifest("player", playerFetched);
       let enemyManifest = pickManifest("enemy", enemyFetched);
+      // Boss falls back through the same generic enemy placeholder as regular enemies - there's
+      // no dedicated "generic boss" art, and a distinct boss-typed asset (see SpriteProvider's
+      // BOSS_SPRITE_ID handling) is preferred over it whenever one is available.
+      let bossManifest = pickManifest("enemy", bossFetched);
 
       const failedKeys = new Set<string>();
       this.load.on(PhaserLib.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => failedKeys.add(file.key));
@@ -169,6 +174,7 @@ export function createDungeonScene(
       queueManifestTextures(this, GENERIC_ENEMY_MANIFEST, queued);
       queueManifestTextures(this, playerManifest, queued);
       queueManifestTextures(this, enemyManifest, queued);
+      queueManifestTextures(this, bossManifest, queued);
 
       await new Promise<void>((resolve) => {
         this.load.once(PhaserLib.Loader.Events.COMPLETE, () => resolve());
@@ -177,8 +183,9 @@ export function createDungeonScene(
 
       if (manifestHasFailedTexture(playerManifest, failedKeys)) playerManifest = SLICED_KNIGHT_MANIFEST;
       if (manifestHasFailedTexture(enemyManifest, failedKeys)) enemyManifest = GENERIC_ENEMY_MANIFEST;
+      if (manifestHasFailedTexture(bossManifest, failedKeys)) bossManifest = GENERIC_ENEMY_MANIFEST;
 
-      return { player: playerManifest, enemy: enemyManifest };
+      return { player: playerManifest, enemy: enemyManifest, boss: bossManifest };
     }
 
     async create() {
@@ -237,7 +244,7 @@ export function createDungeonScene(
       this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
       const spriteProvider = new LocalSpriteProvider(config.asset_urls);
-      const { player: playerManifest, enemy: enemyManifest } = await this.loadEntityManifests(spriteProvider);
+      const { player: playerManifest, enemy: enemyManifest, boss: bossManifest } = await this.loadEntityManifests(spriteProvider);
 
       const playerX = map.tileToWorldX(startRoom.centerX)!;
       const playerY = map.tileToWorldY(startRoom.centerY)!;
@@ -277,6 +284,7 @@ export function createDungeonScene(
         map,
         config,
         enemyManifest,
+        bossManifest,
         fontFamily,
         getPlayer: () => this.player,
         blocker,
