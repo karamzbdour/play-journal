@@ -134,10 +134,10 @@ def login(user_data: UserSignIn):
         )
         response = supabase_client.auth.sign_in_with_password(credentials)
         
-        if not response.session:
+        if not response.session or not response.user:
             raise HTTPException(
                 status_code=400,
-                detail="Authentication failed: No session returned."
+                detail="Authentication failed: No session or user returned."
             )
             
         return {
